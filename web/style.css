@@ -151,7 +151,13 @@ button.key:not(:disabled) {
 
 .stamp.success { color: #2e6b3a; }
 
-.lobby { gap: 20px; }
+/* The menu card fills the phone screen, like the original portrait layout. */
+.screen:has(> .lobby) {
+  min-height: calc(100dvh - 32px);
+  grid-template-rows: auto 1fr auto;
+}
+
+.lobby { gap: 20px; align-content: start; }
 
 .lobby > button { margin-top: 4px; }
 

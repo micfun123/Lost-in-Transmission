@@ -10,12 +10,15 @@ test("serves the game and link preview without a build step", async (t) => {
   assert.equal(page.status, 200);
   const html = await page.text();
   assert.ok(html.includes('<script type="module" src="/game.js">'));
-  assert.ok(html.includes(`content="${base.replace("http:", "https:")}/preview.png"`));
+  assert.ok(html.includes(`content="${base.replace("http:", "https:")}/logo.jpg"`));
+  assert.ok(html.includes('rel="icon" href="/favicon.png"'));
+  assert.ok(html.includes('rel="apple-touch-icon" href="/apple-touch-icon.png"'));
 
   const assets = [
     ["/game.js", "text/javascript"], ["/screens.js", "text/javascript"],
     ["/radio.js", "text/javascript"], ["/style.css", "text/css"],
-    ["/preview.png", "image/png"], ["/assets/fonts/SpecialElite-Regular.ttf", "font/ttf"],
+    ["/logo.jpg", "image/jpeg"], ["/favicon.png", "image/png"], ["/apple-touch-icon.png", "image/png"],
+    ["/assets/fonts/SpecialElite-Regular.ttf", "font/ttf"],
   ];
   for (const [path, mime] of assets) {
     const response = await fetch(base + path);

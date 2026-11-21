@@ -18,7 +18,9 @@ const ASSETS = new Map([
   ["/screens.js", "text/javascript; charset=utf-8"],
   ["/radio.js", "text/javascript; charset=utf-8"],
   ["/style.css", "text/css; charset=utf-8"],
-  ["/preview.png", "image/png"],
+  ["/logo.jpg", "image/jpeg"],
+  ["/favicon.png", "image/png"],
+  ["/apple-touch-icon.png", "image/png"],
   ["/assets/fonts/SpecialElite-Regular.ttf", "font/ttf"],
   ["/assets/fonts/IBMPlexMono-Regular.ttf", "font/ttf"],
   ["/assets/fonts/IBMPlexMono-SemiBold.ttf", "font/ttf"],
@@ -36,10 +38,10 @@ function embedTags(request) {
     "og:title": TITLE,
     "og:description": DESCRIPTION,
     "og:url": `${base}/`,
-    "og:image": `${base}/preview.png`,
-    "og:image:width": "1200",
-    "og:image:height": "630",
-    "og:image:alt": "Lost in Transmission title card",
+    "og:image": `${base}/logo.jpg`,
+    "og:image:width": "512",
+    "og:image:height": "512",
+    "og:image:alt": "Lost in Transmission logo",
     "twitter:card": "summary_large_image",
   };
   return Object.entries(tags).map(([key, value]) => {
@@ -64,8 +66,9 @@ function servePage(request, response) {
         response.writeHead(500).end();
         return;
       }
-      const cache = path.endsWith(".png") || path.endsWith(".ttf") ? "public, max-age=86400" : "no-cache";
-      response.writeHead(200, { "Content-Type": ASSETS.get(path), "Cache-Control": cache });
+      const type = ASSETS.get(path);
+      const cache = type.startsWith("image/") || type.startsWith("font/") ? "public, max-age=86400" : "no-cache";
+      response.writeHead(200, { "Content-Type": type, "Cache-Control": cache });
       response.end(content);
     });
   } else {

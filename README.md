@@ -1,3 +1,5 @@
+<p align="center"><img src="web/logo.jpg" alt="Lost in Transmission logo" width="256"></p>
+
 # Lost in Transmission
 
 Two-player co-op spy game set in Kessel, 1974. Magpie guides Wren through three cases over a word-tile radio. ECHO learns recurring words and interferes with later transmissions.
@@ -36,7 +38,7 @@ Run `npm start -- --host 0.0.0.0` and open `http://SERVER_IP:8000` on each devic
 - `web/radio.js` defines the word-tile vocabulary shared by the client and server.
 - `operation.js` defines the mission maps, role visibility, objectives, and ECHO's radio rules.
 - `server.js` serves the game and keeps multiplayer rooms in sync.
-- `web/preview.png` is the 1200×630 image shown in link previews.
+- `web/` also holds the link-preview logo and browser icons.
 
 ## Docker
 

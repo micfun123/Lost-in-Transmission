@@ -126,7 +126,7 @@ class Screens:
         self.surface.fill(BG)
         state = game.state
         if not state or state["phase"] == "lobby":
-            self.lobby(game)
+            self.lobby(game, now)
         elif state["phase"] == "briefing":
             self.briefing(game)
         elif state["phase"] != "active":
@@ -142,7 +142,7 @@ class Screens:
         self.text("THE BUREAU · KESSEL · 1974", 20, 28, 11, MUTED)
         self.text("CH 7.215 MHz", 370, 28, 11, MUTED, align="right")
 
-    def lobby(self, game):
+    def lobby(self, game, now):
         self.station()
         self.rectangle((20, 62, 350, 635), PAPER)
         self.stamp("CONFIDENTIAL", 350, 72, RED, -8)
@@ -151,6 +151,9 @@ class Screens:
         if game.state:
             self.text("ROOM CODE", 44, 222, 11, FADED)
             self.text(game.state["code"], 44, 246, 54, INK, "bold")
+            copied = now - game.copied_at < 2
+            self.button((246, 254, 100, 44), "COPIED" if copied else "COPY", {"type": "copy"},
+                        style="selected" if copied else "normal")
             self.paragraph("Share this code with Wren to open the case file.", 44, 338, 300, 13)
             self.paragraph(game.status or "Waiting for Wren to connect.", 44, 419, 300, 12, FADED)
             self.button((20, 764, 350, 56), "CLOSE ROOM", {"type": "confirm_leave"}, game.online)

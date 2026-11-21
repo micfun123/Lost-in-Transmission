@@ -1,0 +1,7 @@
+services:
+  web:
+    build: .
+    image: lost-in-transmission:latest
+    ports:
+      - "127.0.0.1:8620:80"
+    restart: unless-stopped

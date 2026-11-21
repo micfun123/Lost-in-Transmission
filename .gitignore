@@ -1,3 +1,12 @@
 # Godot 4+ specific ignores
 .godot/
 /android/
+
+# Exported builds (upload these to itch.io, don't commit them)
+/build/
+
+# Editor / OS junk
+*.tmp
+.DS_Store
+Thumbs.db
+.vscode/

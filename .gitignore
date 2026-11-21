@@ -4,5 +4,11 @@ __pycache__/
 .venv/
 venv/
 
-# pygbag build output
+# Pygbag builds
 build/
+
+# Editor / OS junk
+*.tmp
+.DS_Store
+Thumbs.db
+.vscode/

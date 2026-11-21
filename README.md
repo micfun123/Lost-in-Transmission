@@ -1,49 +1,38 @@
 # Lost in Transmission
 
-A pygame game that runs on desktop and in the browser via [pygbag](https://github.com/pygame-web/pygbag).
+Two-player co-op spy game set in Kessel, 1974. The handler guides the agent through three missions over a text radio. ECHO listens for repeated words and interferes with later transmissions.
 
-## Layout
+## Run a local session
 
-```
-main.py           # entry point (pygbag requires this name)
-assets/
-  images/
-  sounds/         # use .ogg for web compatibility
-  fonts/
-requirements.txt
-```
-
-## Setup
+Use Python 3.10 or newer. From the repository root:
 
 ```sh
 python -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
+python -m pip install -r requirements.txt
+python -m pygbag --build --ume_block 0 --title "Lost in Transmission" game
+python server.py
 ```
 
-## Run on desktop
+In Windows PowerShell, activate the environment with `.\.venv\Scripts\Activate.ps1`.
 
-```sh
-python main.py
-```
+Open the local preview in two browser tabs or windows. The lobby opens automatically once the browser loads the Pygbag WebAssembly runtime. One player creates a room as the handler, and the other joins as the agent using the displayed room code. [Local preview](http://localhost:8000/)
 
-## Run in the browser
+To use the desktop client, keep the server running and launch each client with `python game/main.py`. Set `LIT_SERVER_URL` to a different WebSocket endpoint when connecting a desktop client to another server.
 
-```sh
-pygbag .
-```
+## Play
 
-Then open http://localhost:8000.
+- The **handler** sees the full map, including the real drop, decoys, and extraction. The map uses column letters and row numbers.
+- The **agent** sees the surrounding streets. Move with **WASD**, the **arrow keys**, or the on-screen arrows. Press **E** or **Interact** to check a drop or extract. Three different decoys blow the agent's cover.
+- Both players use the radio to exchange plans. Click the field or press **Enter** to type, then press **Enter** again to send. ECHO learns recurring words from both players and remembers them across missions.
+- Recover the package and reach extraction before the ten-minute clock runs out. Both players confirm mission changes, retries, and campaign replay.
+- The clock pauses if either player disconnects. Reopen the connection in the same browser tab to resume the room. Either player can close the room from the game.
 
-## Build for web
+## Play from separate devices
 
-```sh
-pygbag --build .
-```
+Run the server with `python server.py --host 0.0.0.0` and open `http://SERVER_IP:8000` on each device on the same network. For internet play, put the Python server behind an HTTPS reverse proxy that forwards both the game page and the WebSocket upgrade at `/ws` on the same hostname. Rooms and ECHO's memory live in server memory for the session.
 
-Output goes to `build/web/` (ready for itch.io or GitHub Pages).
-
-## Notes for pygbag
+## Project layout
 
 - Keep the main loop `async` and call `await asyncio.sleep(0)` once per frame.
 - Load assets with relative paths (e.g. `assets/images/player.png`).

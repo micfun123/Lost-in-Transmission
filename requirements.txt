@@ -1,2 +1,3 @@
-pygame-ce
-pygbag
+aiohttp==3.14.5
+pygame-ce==2.5.8
+pygbag==0.9.3

@@ -8,6 +8,10 @@ RUN pip install --no-cache-dir $(grep -E '^pygbag' requirements.txt)
 COPY game ./game
 RUN python -m pygbag --build --ume_block 0 --title "Lost in Transmission" game
 
+# Serve the Python runtime ourselves instead of from GitHub Pages, which is slow for players
+COPY deploy/mirror_runtime.py ./
+RUN python mirror_runtime.py game/build/web
+
 # Run the multiplayer server, which also serves the client
 FROM python:3.12-slim
 

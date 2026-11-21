@@ -153,7 +153,7 @@ button.key:not(:disabled) {
 
 /* The menu card fills the phone screen, like the original portrait layout. */
 .screen:has(> .lobby) {
-  min-height: calc(100dvh - 32px);
+  min-height: calc(100svh - 32px);
   grid-template-rows: auto 1fr auto;
 }
 

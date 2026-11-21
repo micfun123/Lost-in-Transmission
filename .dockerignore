@@ -3,4 +3,5 @@
 .venv
 venv
 build
+game/build
 __pycache__

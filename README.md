@@ -44,17 +44,17 @@ Run the server with `python server.py --host 0.0.0.0` and open `http://SERVER_IP
 docker compose up -d --build
 ```
 
-This builds the web version with pygbag and serves it with nginx on http://127.0.0.1:8620.
+This builds the browser client with pygbag and runs `server.py`, which serves the game and the `/ws` WebSocket on http://127.0.0.1:8620.
 
 ## Deploying
 
 The game is hosted at https://transmission.michaelrbparker.com on the Hetzner server:
 
 - The repo is cloned to `/root/lost-in-transmission` and runs with Docker Compose.
-- The host nginx proxies the domain to port 8620 (`deploy/transmission.michaelrbparker.com.conf`).
+- The host nginx proxies the domain and WebSocket upgrades to port 8620 (`deploy/transmission.michaelrbparker.com.conf`).
 - Cloudflare handles HTTPS.
 
-To deploy the latest `main`:
+Every push to `main` builds and deploys automatically through GitHub Actions. To deploy by hand:
 
 ```sh
 ssh hetzner /root/lost-in-transmission/deploy/deploy.sh

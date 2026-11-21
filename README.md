@@ -10,13 +10,13 @@ Use Python 3.10 or newer. From the repository root:
 python -m venv .venv
 source .venv/bin/activate
 python -m pip install -r requirements.txt
-python -m pygbag --build --title "Lost in Transmission" game
+python -m pygbag --build --ume_block 0 --title "Lost in Transmission" game
 python server.py
 ```
 
 In Windows PowerShell, activate the environment with `.\.venv\Scripts\Activate.ps1`.
 
-Open [localhost:8000](http://localhost:8000) in two browser tabs or windows. Click the Pygbag launch prompt in each. One player creates a room as the handler, and the other joins as the agent using the displayed room code. The browser build fetches the Python/Pygame WebAssembly runtime from Pygbag's CDN.
+Open the local preview in two browser tabs or windows. The lobby opens automatically once the browser loads the Pygbag WebAssembly runtime. One player creates a room as the handler, and the other joins as the agent using the displayed room code. [Local preview](http://localhost:8000/)
 
 To use the desktop client, keep the server running and launch each client with `python game/main.py`. Set `LIT_SERVER_URL` to a different WebSocket endpoint when connecting a desktop client to another server.
 

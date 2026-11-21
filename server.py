@@ -175,7 +175,10 @@ def create_app():
     async def index(_request):
         path = WEB_BUILD / "index.html"
         if not path.is_file():
-            return web.Response(status=503, text="Build the browser client with python -m pygbag --build game.")
+            return web.Response(
+                status=503,
+                text="Build the browser client with python -m pygbag --build --ume_block 0 game.",
+            )
         return web.FileResponse(path, headers={"Cache-Control": "no-cache"})
 
     async def asset(request):

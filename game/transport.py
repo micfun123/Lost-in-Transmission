@@ -9,6 +9,8 @@ import sys
 IN_BROWSER = sys.platform == "emscripten"
 
 SOCKET_BRIDGE = """
+document.body.style.background = "#0F1416";
+document.getElementById("canvas").style.touchAction = "none";
 globalThis.litSocket = {
     queue: [],
     socket: null,
@@ -33,12 +35,12 @@ globalThis.litSocket = {
             const input = document.createElement("input");
             input.type = "text";
             input.autocomplete = "off";
+            input.autocapitalize = "characters";
             input.tabIndex = -1;
             input.style.cssText = "position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;pointer-events:none";
             input.addEventListener("input", () => {
-                const focus = input.dataset.field;
-                if (focus === "code") input.value = input.value.replace(/[^a-z0-9]/gi, "").toUpperCase();
-                this.notify({type: "edit", focus, value: input.value});
+                input.value = input.value.replace(/[^a-z0-9]/gi, "").toUpperCase();
+                this.notify({type: "edit", value: input.value});
             });
             input.addEventListener("keydown", (event) => {
                 event.stopPropagation();
@@ -52,9 +54,8 @@ globalThis.litSocket = {
             this.input = input;
         }
         if (focus) {
-            this.input.dataset.field = focus;
-            this.input.setAttribute("aria-label", focus === "code" ? "Room code" : "Radio transmission");
-            this.input.maxLength = focus === "code" ? 5 : 120;
+            this.input.setAttribute("aria-label", "Room code");
+            this.input.maxLength = 5;
             this.input.value = value;
             this.input.focus({preventScroll: true});
             this.input.setSelectionRange(value.length, value.length);

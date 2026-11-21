@@ -3,5 +3,5 @@ services:
     build: .
     image: lost-in-transmission:latest
     ports:
-      - "127.0.0.1:8620:80"
+      - "127.0.0.1:8620:8000"
     restart: unless-stopped

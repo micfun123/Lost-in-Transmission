@@ -14,7 +14,7 @@ from operation import Room
 
 
 WEB_BUILD = Path(__file__).resolve().parent / "game" / "build" / "web"
-PREVIEW = Path(__file__).resolve().parent / "web" / "preview.png"
+BRANDING = Path(__file__).resolve().parent / "web"
 PYGBAG_CDN = "https://pygame-web.github.io/cdn"
 CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 TITLE = "Lost in Transmission"
@@ -34,13 +34,13 @@ def embed_tags(base):
         "og:title": TITLE,
         "og:description": DESCRIPTION,
         "og:url": f"{base}/",
-        "og:image": f"{base}/preview.png",
-        "og:image:width": "1200",
-        "og:image:height": "630",
-        "og:image:alt": "Lost in Transmission title card",
+        "og:image": f"{base}/logo.jpg",
+        "og:image:width": "512",
+        "og:image:height": "512",
+        "og:image:alt": "Lost in Transmission logo",
         "twitter:card": "summary_large_image",
     }
-    return "".join(
+    return '<link rel="apple-touch-icon" href="/apple-touch-icon.png">' + "".join(
         f'<meta {"property" if key.startswith("og:") else "name"}="{key}" content="{html.escape(value)}">'
         for key, value in tags.items()
     )
@@ -234,8 +234,8 @@ def create_app():
         )
         return web.Response(text=page, content_type="text/html", headers=headers)
 
-    async def preview(_request):
-        return web.FileResponse(PREVIEW, headers={"Cache-Control": "public, max-age=86400"})
+    async def branding(request):
+        return web.FileResponse(BRANDING / request.match_info["file"], headers={"Cache-Control": "public, max-age=86400"})
 
     async def asset(request):
         return web.FileResponse(WEB_BUILD / request.match_info["file"], headers={"Cache-Control": "no-cache"})
@@ -252,8 +252,8 @@ def create_app():
     app.cleanup_ctx.append(maintenance)
     app.router.add_get("/", index)
     app.router.add_get("/ws", multiplayer.socket)
-    app.router.add_get("/preview.png", preview)
-    app.router.add_get(r"/{file:game\.apk|game\.tar\.gz|favicon\.png}", asset)
+    app.router.add_get(r"/{file:logo\.jpg|favicon\.png|apple-touch-icon\.png}", branding)
+    app.router.add_get(r"/{file:game\.apk|game\.tar\.gz}", asset)
     app.router.add_get("/cdn/{path:.+}", runtime)
     return app
 

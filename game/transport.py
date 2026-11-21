@@ -5,6 +5,8 @@ import json
 import os
 import sys
 
+from screens import SIZE
+
 
 IN_BROWSER = sys.platform == "emscripten"
 
@@ -15,6 +17,7 @@ globalThis.litSocket = {
     queue: [],
     socket: null,
     input: null,
+    zones: [],
     notify(data) { this.queue.push(JSON.stringify(data)); },
     connect() {
         const scheme = location.protocol === "https:" ? "wss:" : "ws:";
@@ -29,6 +32,24 @@ globalThis.litSocket = {
     },
     send(message) {
         if (this.socket?.readyState === WebSocket.OPEN) this.socket.send(message);
+    },
+    setZones(zones) { this.zones = zones; },
+    // Focus and clipboard access only work inside the browser's own input event,
+    // so taps on these canvas areas are handled here rather than a frame later.
+    gesture(event) {
+        const box = document.getElementById("canvas").getBoundingClientRect();
+        const x = (event.clientX - box.left) * WIDTH / box.width;
+        const y = (event.clientY - box.top) * HEIGHT / box.height;
+        const zone = this.zones.find(([left, top, width, height]) =>
+            x >= left && x < left + width && y >= top && y < top + height);
+        if (!zone) return;
+        const [, , , , action, value] = zone;
+        if (action === "focus") {
+            this.edit("code", this.input?.value ?? "");
+        } else if (action === "copy") {
+            const copied = navigator.clipboard?.writeText(value) ?? Promise.reject();
+            copied.then(() => this.notify({type: "copied"}), () => this.notify({type: "copy_failed"}));
+        }
     },
     edit(focus, value) {
         if (!this.input) {
@@ -50,6 +71,8 @@ globalThis.litSocket = {
                 }
             });
             input.addEventListener("keyup", (event) => event.stopPropagation());
+            input.addEventListener("focus", () => this.notify({type: "focused"}));
+            input.addEventListener("blur", () => this.notify({type: "blurred"}));
             document.body.appendChild(input);
             this.input = input;
         }
@@ -74,6 +97,7 @@ globalThis.litSocket = {
     },
     close() { this.socket?.close(); },
 };
+window.addEventListener("pointerup", (event) => globalThis.litSocket.gesture(event), true);
 """
 
 
@@ -82,7 +106,8 @@ class BrowserTransport:
         import platform
 
         self.evaluate = platform.window.eval
-        self.evaluate(SOCKET_BRIDGE)
+        self.zones = None
+        self.evaluate(f"const WIDTH = {SIZE[0]}, HEIGHT = {SIZE[1]};\n{SOCKET_BRIDGE}")
 
     def connect(self):
         self.evaluate("globalThis.litSocket.connect()")
@@ -96,6 +121,14 @@ class BrowserTransport:
 
     def edit(self, focus, value):
         self.evaluate(f"globalThis.litSocket.edit({json.dumps(focus)}, {json.dumps(value)})")
+
+    def set_zones(self, zones):
+        if zones != self.zones:
+            self.zones = zones
+            self.evaluate(f"globalThis.litSocket.setZones({json.dumps(zones)})")
+
+    def copy(self, text):
+        pass
 
     def read_session(self):
         return json.loads(self.evaluate("globalThis.litSocket.readSession()"))
@@ -145,6 +178,19 @@ class DesktopTransport:
         if self.socket is not None:
             with suppress(ConnectionError, RuntimeError):
                 await self.socket.send_json(data)
+
+    def set_zones(self, zones):
+        pass
+
+    def copy(self, text):
+        import pygame
+
+        try:
+            pygame.scrap.put_text(text)
+        except pygame.error:
+            self.inbox.append({"type": "copy_failed"})
+        else:
+            self.inbox.append({"type": "copied"})
 
     def read_session(self):
         return self.session

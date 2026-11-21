@@ -31,6 +31,7 @@ class Game:
         self.editing = False
         self.confirm_leave = False
         self.code = ""
+        self.copied_at = -math.inf
         self.draft = []
         self.category = "PLACE"
         self.log_offset = 0
@@ -110,6 +111,15 @@ class Game:
                 await self.command({"type": "join"})
             elif kind == "cancel_edit":
                 self.edit_code(False)
+            # The browser reports focus changes so a lost focus can be regained with one tap.
+            elif kind == "focused":
+                self.editing = True
+            elif kind == "blurred":
+                self.editing = False
+            elif kind == "copied":
+                self.copied_at = now
+            elif kind == "copy_failed":
+                self.notice = "Couldn't copy the code. Read it out to Wren instead."
 
     def update_state(self, state, now):
         old = self.state
@@ -125,6 +135,9 @@ class Game:
         action = command["type"]
         if action == "edit":
             self.edit_code(True)
+            return
+        if action == "copy":
+            self.transport.copy(self.state["code"])
             return
         if action == "confirm_leave":
             self.confirm_leave = True
@@ -236,6 +249,10 @@ async def main():
                     break
                 await game.handle(event, screens)
             screens.draw(game, now)
+            transport.set_zones([
+                [*rect, "focus" if command["type"] == "edit" else "copy", game.state and game.state["code"]]
+                for rect, command in screens.targets if command["type"] in ("edit", "copy")
+            ])
             pygame.display.flip()
             clock.tick(0 if IN_BROWSER else 60)
             await asyncio.sleep(0)

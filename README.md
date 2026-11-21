@@ -34,7 +34,28 @@ Run the server with `python server.py --host 0.0.0.0` and open `http://SERVER_IP
 
 ## Project layout
 
-- `game/main.py` runs the Pygame client on desktop and in the browser.
-- `game/transport.py` connects to the multiplayer WebSocket using the browser or desktop networking APIs.
-- `operation.py` defines the mission maps, role visibility, objectives, and ECHO's radio rules.
-- `server.py` hosts the client and keeps multiplayer rooms in sync.
+- Keep the main loop `async` and call `await asyncio.sleep(0)` once per frame.
+- Load assets with relative paths (e.g. `assets/images/player.png`).
+- Use `.ogg` for audio.
+
+## Docker
+
+```sh
+docker compose up -d --build
+```
+
+This builds the web version with pygbag and serves it with nginx on http://127.0.0.1:8620.
+
+## Deploying
+
+The game is hosted at https://transmission.michaelrbparker.com on the Hetzner server:
+
+- The repo is cloned to `/root/lost-in-transmission` and runs with Docker Compose.
+- The host nginx proxies the domain to port 8620 (`deploy/transmission.michaelrbparker.com.conf`).
+- Cloudflare handles HTTPS.
+
+To deploy the latest `main`:
+
+```sh
+ssh hetzner /root/lost-in-transmission/deploy/deploy.sh
+```

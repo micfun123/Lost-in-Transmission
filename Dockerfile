@@ -1,28 +1,14 @@
-# Build the browser client with pygbag
-FROM python:3.12-slim AS build
-
-WORKDIR /src
-COPY requirements.txt ./
-RUN pip install --no-cache-dir $(grep -E '^pygbag' requirements.txt)
-
-COPY game ./game
-RUN python -m pygbag --build --ume_block 0 --title "Lost in Transmission" game
-
-# Serve the Python runtime ourselves instead of from GitHub Pages, which is slow for players
-COPY deploy/mirror_runtime.py ./
-RUN python mirror_runtime.py game/build/web
-
-# Run the multiplayer server, which also serves the client
-FROM python:3.12-slim
+FROM node:24-bookworm-slim
 
 WORKDIR /app
-COPY requirements.txt ./
-RUN pip install --no-cache-dir $(grep -E '^aiohttp' requirements.txt)
+ENV NODE_ENV=production
 
-COPY server.py operation.py ./
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev
+
+COPY server.js operation.js ./
 COPY web ./web
-COPY game/radio.py ./game/
-COPY --from=build /src/game/build/web ./game/build/web
 
+USER node
 EXPOSE 8000
-CMD ["python", "server.py", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["node", "server.js", "--host", "0.0.0.0", "--port", "8000"]

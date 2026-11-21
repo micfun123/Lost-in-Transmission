@@ -46,12 +46,8 @@ function redactionCount(tiles) {
   return tiles.filter((tile) => tile === REDACTED).length;
 }
 
-// Match the original score's rounding, including ties to the even integer.
 function signalScore(sent, blocked) {
-  if (!sent) return 100;
-  const score = 100 * (sent - blocked) / sent;
-  const whole = Math.floor(score);
-  return score - whole === 0.5 && whole % 2 === 0 ? whole : Math.round(score);
+  return sent ? Math.round(100 * (sent - blocked) / sent) : 100;
 }
 
 export class Room {

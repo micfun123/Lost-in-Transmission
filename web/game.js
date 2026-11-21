@@ -2,6 +2,8 @@ import { MESSAGE_LIMIT, REDACTED } from "./radio.js";
 import { renderScreen } from "./screens.js";
 
 const SESSION_KEY = "lost-in-transmission";
+const TUTORIAL_KEY = "lost-in-transmission-tutorial";
+const TUTORIAL_TILES = { ".": "", "#": "wall", D: "package", E: "drop", W: "wren" };
 const MOVEMENT_KEYS = {
   ArrowUp: "up", w: "up", ArrowLeft: "left", a: "left",
   ArrowDown: "down", s: "down", ArrowRight: "right", d: "right",
@@ -24,6 +26,43 @@ function saveSession(session) {
     // The open tab can still reconnect using the session in memory.
   }
 }
+
+function setupTutorial(dialog) {
+  for (const map of dialog.querySelectorAll("[data-map]")) {
+    const [fogX, fogY] = (map.dataset.fog ?? "").split(",").map(Number);
+    map.dataset.map.split(" ").forEach((row, y) => [...row].forEach((tile, x) => {
+      const fogged = map.dataset.fog && (Math.abs(x - fogX) > 1 || Math.abs(y - fogY) > 1);
+      const cell = document.createElement("span");
+      cell.className = `tile ${fogged ? "unknown" : TUTORIAL_TILES[tile]}`;
+      if (tile === "W") cell.textContent = "W";
+      map.append(cell);
+    }));
+  }
+  const steps = dialog.querySelectorAll("section");
+  const back = dialog.querySelector("#tutorial-back");
+  const next = dialog.querySelector("#tutorial-next");
+  let step = 0;
+  const show = (index) => {
+    step = index;
+    steps.forEach((section, i) => { section.hidden = i !== index; });
+    dialog.querySelector("#tutorial-step").textContent = index + 1;
+    back.disabled = index === 0;
+    next.textContent = index === steps.length - 1 ? "Play" : "Next";
+  };
+  back.addEventListener("click", () => show(step - 1));
+  next.addEventListener("click", () => (step === steps.length - 1 ? dialog.close() : show(step + 1)));
+  return () => {
+    show(0);
+    dialog.showModal();
+    try {
+      localStorage.setItem(TUTORIAL_KEY, "seen");
+    } catch {
+      // Without storage the tutorial just opens again on the next visit.
+    }
+  };
+}
+
+const openTutorial = setupTutorial(document.getElementById("tutorial"));
 
 class Game {
   constructor(root, dialog) {
@@ -184,6 +223,10 @@ class Game {
   }
 
   command(action, value) {
+    if (action === "tutorial") {
+      openTutorial();
+      return;
+    }
     if (action === "copy" && this.state) {
       this.copyCode();
       return;
@@ -220,7 +263,7 @@ class Game {
   }
 
   onKey(event) {
-    if (event.repeat || event.isComposing || event.ctrlKey || event.metaKey || event.altKey || this.dialog.open) return;
+    if (event.repeat || event.isComposing || event.ctrlKey || event.metaKey || event.altKey || document.querySelector("dialog[open]")) return;
     const key = event.key.toLowerCase();
     if (event.target instanceof HTMLInputElement) {
       if (key === "escape") event.target.blur();
@@ -284,3 +327,8 @@ class Game {
 }
 
 new Game(document.getElementById("game"), document.getElementById("leave-dialog"));
+try {
+  if (!localStorage.getItem(TUTORIAL_KEY)) openTutorial();
+} catch {
+  // Storage is blocked, so skip the first-visit tutorial; the lobby button still opens it.
+}

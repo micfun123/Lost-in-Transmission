@@ -500,3 +500,113 @@ dialog::backdrop { background: #000b; }
 dialog h2 { font: 2rem / 1.2 var(--title); }
 dialog p { margin: 8px 0 14px; }
 dialog button { flex: 1; }
+
+/* How-to-play tutorial. Animations loop every 4s; the resting state is the finished scene. */
+.tutorial { width: min(100% - 32px, 380px); }
+.tutorial section { display: grid; gap: 12px; align-content: start; min-height: 330px; margin-block: 8px 14px; }
+.tutorial section[hidden] { display: none; }
+.tutorial section p { margin: 0; }
+.tutorial figure { display: grid; gap: 4px; justify-items: center; margin: 0; }
+.tutorial figcaption { color: var(--faded); font-size: 0.74rem; text-align: center; }
+
+.tut-map {
+  --cell: 30px;
+  --gap: 3px;
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(5, var(--cell));
+  grid-auto-rows: var(--cell);
+  gap: var(--gap);
+  padding: 4px;
+  border-radius: 4px;
+  background: var(--background);
+}
+
+.tut-pair { display: flex; align-items: center; justify-content: center; gap: 6px; }
+.tut-pair .tut-map { --cell: 20px; --gap: 2px; }
+.tut-signal {
+  width: 24px;
+  height: 4px;
+  background: repeating-linear-gradient(90deg, var(--red) 0 4px, transparent 4px 8px);
+  animation: tut-signal 0.8s linear infinite;
+}
+
+.tut-radio { display: grid; gap: 8px; }
+.tut-draft, .tut-incoming { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; min-height: 40px; padding: 6px; border-radius: 4px; }
+.tut-draft { border: 1px solid var(--amber); background: var(--panel); }
+.tut-draft .word { background: var(--paper); color: var(--ink); }
+.tut-incoming { border: 1px solid var(--rule); }
+.tut-incoming .caption { width: 100%; }
+.tut-w1 { animation: tut-w1 4s infinite; }
+.tut-w2 { animation: tut-w2 4s infinite; }
+.tut-w3 { animation: tut-w3 4s infinite; }
+.tut-send { animation: tut-send 4s infinite; }
+.tut-arrive { animation: tut-arrive 4s infinite; }
+
+.tut-walk { display: flex; gap: 16px; align-items: end; justify-content: center; }
+.tut-walk > div:last-child { display: grid; gap: 6px; }
+.tut-token {
+  position: absolute;
+  left: calc(4px + var(--cell) + var(--gap));
+  top: calc(4px + 4 * (var(--cell) + var(--gap)));
+  width: var(--cell);
+  height: var(--cell);
+  animation: tut-walk 4s infinite;
+}
+.tut-walk .tile.package { animation: tut-take 4s infinite; }
+.tut-points {
+  position: relative;
+  width: 60px;
+  height: 12px;
+  background: repeating-linear-gradient(90deg, var(--rule) 0 12px, transparent 12px 16px);
+}
+.tut-points::after {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 60px;
+  background: repeating-linear-gradient(90deg, var(--amber) 0 12px, transparent 12px 16px);
+  animation: tut-spend 4s infinite;
+}
+
+.tut-log { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.tut-log li { display: flex; gap: 6px; align-items: center; min-height: 32px; }
+.tut-jam { animation: tut-jam 4s infinite; }
+.tut-key { flex: none; min-height: 28px; margin-left: auto; padding: 2px 8px; font-size: 0.8rem; animation: tut-key 4s infinite; }
+
+.tut-street {
+  position: relative;
+  width: 195px;
+  height: 30px;
+  margin-inline: auto;
+  background: repeating-linear-gradient(90deg, #1c2528 0 30px, transparent 30px 33px);
+}
+.tut-guard { position: absolute; width: 30px; height: 30px; animation: tut-patrol 3s steps(5) infinite alternate; }
+.tut-rules { display: grid; gap: 6px; margin: 0; padding-left: 18px; line-height: 1.5; }
+
+@keyframes tut-signal { to { background-position: 8px 0; } }
+@keyframes tut-w1 { 0%, 10% { opacity: 0; transform: scale(0.6); } 15%, 90% { opacity: 1; transform: none; } 100% { opacity: 0; } }
+@keyframes tut-w2 { 0%, 25% { opacity: 0; transform: scale(0.6); } 30%, 90% { opacity: 1; transform: none; } 100% { opacity: 0; } }
+@keyframes tut-w3 { 0%, 40% { opacity: 0; transform: scale(0.6); } 45%, 90% { opacity: 1; transform: none; } 100% { opacity: 0; } }
+@keyframes tut-send { 0%, 50%, 64%, 100% { box-shadow: none; } 56% { box-shadow: 0 0 0 6px #f2a54166; } }
+@keyframes tut-arrive { 0%, 62% { opacity: 0; transform: translateY(6px); } 68%, 90% { opacity: 1; transform: none; } 100% { opacity: 0; } }
+@keyframes tut-walk {
+  0%, 12% { transform: none; }
+  22%, 30% { transform: translateY(calc(-1 * (var(--cell) + var(--gap)))); }
+  40%, 48% { transform: translateY(calc(-2 * (var(--cell) + var(--gap)))); }
+  58%, 66% { transform: translate(calc(var(--cell) + var(--gap)), calc(-2 * (var(--cell) + var(--gap)))); }
+  76%, 100% { transform: translate(calc(var(--cell) + var(--gap)), calc(-3 * (var(--cell) + var(--gap)))); }
+}
+@keyframes tut-take { 0%, 76% { opacity: 1; } 80%, 100% { opacity: 0; } }
+@keyframes tut-spend { 0%, 12% { width: 60px; } 22%, 30% { width: 44px; } 40%, 48% { width: 28px; } 58%, 66% { width: 12px; } 76%, 100% { width: 0; } }
+@keyframes tut-jam {
+  0%, 20% { color: var(--ink); background: none; border-color: currentColor; }
+  28%, 55% { color: #141414; background: #141414; border-color: #141414; }
+  62%, 100% { color: white; background: var(--red); border-color: var(--red); }
+}
+@keyframes tut-key { 0%, 44%, 60%, 100% { box-shadow: none; } 50% { box-shadow: 0 0 0 6px #f2a54166; } }
+@keyframes tut-patrol { to { transform: translateX(165px); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .tutorial *, .tutorial *::after { animation: none !important; }
+}

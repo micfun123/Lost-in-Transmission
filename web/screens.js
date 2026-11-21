@@ -86,6 +86,7 @@ function lobby(game) {
     node("p", null, "Magpie reads the map. Wren works the street. Orders and reports go over the radio."),
     button("Create room · Magpie", "create", { style: "primary", disabled: !game.online }),
     node("form", { id: "join-form", class: "join-form" }, input, join),
+    button("How to play", "tutorial"),
     status(game.status));
   return node("div", { class: "screen" }, station(), paper);
 }

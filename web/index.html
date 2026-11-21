@@ -23,6 +23,58 @@
       <button value="leave" class="primary">Close room</button>
     </form>
   </dialog>
+  <dialog id="tutorial" class="paper tutorial" aria-labelledby="tutorial-heading">
+    <span class="caption">HOW TO PLAY · <span id="tutorial-step">1</span> / 5</span>
+    <section>
+      <h2 id="tutorial-heading">Two agents, one radio</h2>
+      <div class="tut-pair">
+        <figure><div class="tut-map" data-map="..#.E .#D.. ...#. #.... .W.#."></div><figcaption>MAGPIE sees the whole map</figcaption></figure>
+        <span class="tut-signal" aria-hidden="true"></span>
+        <figure><div class="tut-map" data-map="..#.E .#D.. ...#. #.... .W.#." data-fog="1,4"></div><figcaption>WREN sees only nearby tiles</figcaption></figure>
+      </div>
+      <p>One player is <b>Magpie</b>, the handler. The other is <b>Wren</b>, the agent on the street. Magpie creates a room and shares the code. Wren joins with it.</p>
+    </section>
+    <section hidden>
+      <h2>Talk in radio tiles</h2>
+      <div class="tut-radio">
+        <div class="tut-draft"><span class="word tut-w1">GO</span><span class="word tut-w2">NORTH</span><span class="word tut-w3">2</span></div>
+        <button type="button" class="primary tut-send" tabindex="-1" aria-hidden="true">Transmit</button>
+        <div class="tut-incoming tut-arrive"><span class="caption">WREN HEARS</span><span class="word">GO</span><span class="word">NORTH</span><span class="word">2</span></div>
+      </div>
+      <p>There's no chat. Each round Magpie sends an order of up to six word tiles. After moving, Wren sends a field report back the same way.</p>
+    </section>
+    <section hidden>
+      <h2>Wren makes the moves</h2>
+      <div class="tut-walk">
+        <div class="tut-map" data-map="..#.E .#D.. ...#. #.... ...#."><span class="tile wren tut-token">W</span></div>
+        <div><span class="caption">ACTION POINTS</span><span class="tut-points" aria-hidden="true"></span></div>
+      </div>
+      <p>Wren gets <b>four action points</b> a round to move, take or drop. Pick up the <b>package</b> (red) and deliver it to the <b>drop point</b> (teal).</p>
+    </section>
+    <section hidden>
+      <h2>ECHO is listening</h2>
+      <ol class="tut-log">
+        <li><span class="caption">RX 01</span><span class="word">GO</span><span class="word">NORTH</span></li>
+        <li><span class="caption">RX 02</span><span class="word">GO</span><span class="word">EAST</span></li>
+        <li><span class="caption">RX 03</span><span class="word tut-jam">GO</span><span class="word">WEST</span><button type="button" class="key tut-key" tabindex="-1" aria-hidden="true">Decrypt key</button></li>
+      </ol>
+      <p>Words you repeat get learned by ECHO and turn to <b>static</b>. Vary your words. Each player has <b>one decrypt key</b> per case to reveal a jammed tile.</p>
+    </section>
+    <section hidden>
+      <h2>Beat the clock</h2>
+      <div class="tut-street" aria-hidden="true"><span class="tile guard tut-guard">G</span></div>
+      <ul class="tut-rules">
+        <li>Deliver within <b>8 rounds</b> and <b>10 minutes</b>.</li>
+        <li>The guard moves each time Wren spends a point. Getting spotted raises suspicion.</li>
+        <li>A decoy can help Wren blend in.</li>
+        <li>Three cases. ECHO remembers your words between them.</li>
+      </ul>
+    </section>
+    <form method="dialog" class="split">
+      <button type="button" id="tutorial-back">Back</button>
+      <button type="button" id="tutorial-next" class="primary">Next</button>
+    </form>
+  </dialog>
   <noscript><p>Enable JavaScript to join a room.</p></noscript>
 </body>
 </html>

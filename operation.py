@@ -1,5 +1,6 @@
 from collections import Counter
 from dataclasses import dataclass
+import random
 import secrets
 import time
 
@@ -12,6 +13,9 @@ OUTCOMES = {"cleared", "failed", "complete"}
 MISSION_SECONDS = 600
 ROUND_LIMIT = 8
 ACTION_POINTS = 4
+# ECHO's interference by mission risk: (chance per extra use of a learned word, max static tiles per message).
+INTERFERENCE = {"Light": (0.20, 1), "Moderate": (0.25, 2), "Heavy": (0.30, 2)}
+JAM_CHANCE_LIMIT = 0.6
 
 
 @dataclass(frozen=True)
@@ -68,6 +72,7 @@ class Room:
         self.peers = {}
         self.mission_index = 0
         self.words = Counter()
+        self.random = random.Random()
         self.empty_since = None
         self.prepare_case()
         self.phase = "lobby"
@@ -139,6 +144,8 @@ class Room:
             else:
                 if self.phase == "cleared":
                     self.mission_index += 1
+                    # ECHO's memory fades between cases so later cases don't start fully jammed.
+                    self.words = Counter({term: count // 2 for term, count in self.words.items()})
                 elif self.phase == "complete":
                     self.mission_index = 0
                     self.words.clear()
@@ -263,9 +270,12 @@ class Room:
             return False, "Choose one to six radio tiles."
 
         terms = set(tiles)
-        learned = sorted((term for term in terms if self.words[term] >= 2),
-                         key=lambda term: (-self.words[term], term))
-        blocked = set(learned[:self.mission_index + 1])
+        growth, limit = INTERFERENCE[self.mission.risk]
+        # Words ECHO has heard twice may be jammed, more often the more they are used.
+        jammed = [term for term in sorted(terms) if self.words[term] >= 2
+                  and self.random.random() < min(JAM_CHANCE_LIMIT, growth * (self.words[term] - 1))]
+        self.random.shuffle(jammed)
+        blocked = set(jammed[:min(limit, max(1, len(tiles) // 2))])
         self.words.update(terms)
         heard = [REDACTED if tile in blocked else tile for tile in tiles]
         self.transmissions.append({"round": self.round, "sender": role, "sent": tiles, "heard": heard})

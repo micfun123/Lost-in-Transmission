@@ -1,59 +1,40 @@
 # Lost in Transmission
 
-Hackathon game made with **Python** and **Pygame Community Edition**, with browser builds packaged by **Pygbag**.
+Two-player co-op spy game set in Kessel, 1974. The handler guides the agent through three missions over a text radio. ECHO listens for repeated words and interferes with later transmissions.
 
-## Getting started
+## Run a local session
 
-Install Python 3.10 or newer. From the repository root, create a virtual environment and install the dependencies.
+Use Python 3.10 or newer. From the repository root:
 
 ```sh
 python -m venv .venv
 source .venv/bin/activate
 python -m pip install -r requirements.txt
+python -m pygbag --build --title "Lost in Transmission" game
+python server.py
 ```
 
 In Windows PowerShell, activate the environment with `.\.venv\Scripts\Activate.ps1`.
 
-## Playing locally
+Open [localhost:8000](http://localhost:8000) in two browser tabs or windows. Click the Pygbag launch prompt in each. One player creates a room as the handler, and the other joins as the agent using the displayed room code. The browser build fetches the Python/Pygame WebAssembly runtime from Pygbag's CDN.
 
-Run the desktop version with `python game/main.py`.
+To use the desktop client, keep the server running and launch each client with `python game/main.py`. Set `LIT_SERVER_URL` to a different WebSocket endpoint when connecting a desktop client to another server.
 
-For the browser version, run `python -m pygbag --title "Lost in Transmission" game`, then open [localhost:8000](http://localhost:8000) and click the launch prompt. The first run needs an internet connection to fetch Pygbag's WebAssembly runtime.
+## Play
 
-Move with **WASD**, the **arrow keys**, or the **left stick** on a connected gamepad. Press **R** to reset. The camera follows the player, and the grey box blocks movement.
+- The **handler** sees the full map, including the real drop, decoys, and extraction. The map uses column letters and row numbers.
+- The **agent** sees the surrounding streets. Move with **WASD**, the **arrow keys**, or the on-screen arrows. Press **E** or **Interact** to check a drop or extract. Three different decoys blow the agent's cover.
+- Both players use the radio to exchange plans. Click the field or press **Enter** to type, then press **Enter** again to send. ECHO learns recurring words from both players and remembers them across missions.
+- Recover the package and reach extraction before the ten-minute clock runs out. Both players confirm mission changes, retries, and campaign replay.
+- The clock pauses if either player disconnects. Reopen the connection in the same browser tab to resume the room. Either player can close the room from the game.
+
+## Play from separate devices
+
+Run the server with `python server.py --host 0.0.0.0` and open `http://SERVER_IP:8000` on each device on the same network. For internet play, put the Python server behind an HTTPS reverse proxy that forwards both the game page and the WebSocket upgrade at `/ws` on the same hostname. Rooms and ECHO's memory live in server memory for the session.
 
 ## Project layout
 
-```
-game/
-  main.py    desktop and browser entry point
-  assets/    art, audio, and fonts bundled with the game
-```
-
-Use a branch per feature and coordinate changes to shared files. Keep new game modules and assets under `game/` so Pygbag packages them together. The game loop yields each frame with `await asyncio.sleep(0)` to let the browser process input and redraw.
-
-## Hackathon week plan (suggested)
-
-| Day | Goal |
-| --- | --- |
-| 1 | Pick the idea. Do a Pygame tutorial together. Get the core action working with placeholder boxes. |
-| 2–3 | Core loop playable start to finish, even if ugly: start → play → win/lose → restart. |
-| 4–5 | Content: levels, enemies/puzzles, sounds. Real art replaces boxes. |
-| 6 | **Feature freeze.** Polish, title screen, bug fixing, playtest with someone else. |
-| 7 | Export builds, upload, write description. Submit early! |
-
-Scope tip: pick an idea you think takes 3 days. It will take 7.
-
-## Learning resources
-
-- [Pygame CE documentation](https://pyga.me/docs/)
-- [Pygbag quick-start guide](https://pygame-web.github.io/wiki/pygbag/)
-- Free assets from [Kenney](https://kenney.nl/assets), [OpenGameArt](https://opengameart.org), and [sfxr](https://sfxr.me).
-
-## Exporting
-
-```sh
-python -m pygbag --build --archive --title "Lost in Transmission" game
-```
-
-Serve `game/build/web/` over HTTP for a static web deployment, or upload `game/build/web.zip` as an HTML game on itch.io.
+- `game/main.py` runs the Pygame client on desktop and in the browser.
+- `game/transport.py` connects to the multiplayer WebSocket using the browser or desktop networking APIs.
+- `operation.py` defines the mission maps, role visibility, objectives, and ECHO's radio rules.
+- `server.py` hosts the client and keeps multiplayer rooms in sync.

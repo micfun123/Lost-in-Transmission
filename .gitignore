@@ -1,9 +1,9 @@
-# Godot 4+ specific ignores
-.godot/
-/android/
+# Python
+/.venv/
+__pycache__/
 
-# Exported builds (upload these to itch.io, don't commit them)
-/build/
+# Pygbag builds
+/game/build/
 
 # Editor / OS junk
 *.tmp

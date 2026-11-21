@@ -13,6 +13,7 @@ from operation import Room
 
 
 WEB_BUILD = Path(__file__).resolve().parent / "game" / "build" / "web"
+PYGBAG_CDN = "https://pygame-web.github.io/cdn"
 CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 
 
@@ -184,11 +185,16 @@ def create_app():
     async def asset(request):
         return web.FileResponse(WEB_BUILD / request.match_info["file"], headers={"Cache-Control": "no-cache"})
 
+    async def pygame_wheel(request):
+        raise web.HTTPTemporaryRedirect(location=f"{PYGBAG_CDN}/{request.match_info['wheel']}")
+
     app = web.Application()
     app.cleanup_ctx.append(maintenance)
     app.router.add_get("/", index)
     app.router.add_get("/ws", multiplayer.socket)
     app.router.add_get(r"/{file:game\.apk|game\.tar\.gz|favicon\.png}", asset)
+    # Pygbag looks for its Pygame wheel on the local origin when launched on localhost.
+    app.router.add_get(r"/cdn/{wheel:cp[0-9]+/pygame_ce-[A-Za-z0-9_.-]+\.whl}", pygame_wheel)
     return app
 
 

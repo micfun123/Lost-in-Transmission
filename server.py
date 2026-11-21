@@ -210,12 +210,19 @@ def create_app():
                 text="Build the browser client with python -m pygbag --build --ume_block 0 game.",
             )
         headers = {"Cache-Control": "no-cache"}
-        if request.url.host == "localhost":
+        # Fetch packages from the mirrored runtime when the build has one, otherwise from the public CDN on localhost.
+        if (WEB_BUILD / "cdn").is_dir():
+            package_index = "/cdn/"
+        elif request.url.host == "localhost":
+            package_index = f"{PYGBAG_CDN}/"
+        else:
+            package_index = None
+        if package_index:
             query = request.rel_url.raw_query_string
             launch_query = query
             # Pygbag reads PYGPI early and treats its first argument as an interpreter selector.
             if "PYGPI" not in request.query:
-                launch_query += f"&PYGPI={PYGBAG_CDN}/"
+                launch_query += f"&PYGPI={package_index}"
             elif query.startswith("PYGPI="):
                 launch_query = f"&{query}"
             if launch_query != query:
@@ -233,12 +240,21 @@ def create_app():
     async def asset(request):
         return web.FileResponse(WEB_BUILD / request.match_info["file"], headers={"Cache-Control": "no-cache"})
 
+    async def runtime(request):
+        # Serve the Pygbag runtime copied in by deploy/mirror_runtime.py, falling back to the public CDN.
+        name = request.match_info["path"]
+        path = (WEB_BUILD / "cdn" / name).resolve()
+        if path.is_relative_to(WEB_BUILD / "cdn") and path.is_file():
+            return web.FileResponse(path, headers={"Cache-Control": "public, max-age=86400"})
+        raise web.HTTPTemporaryRedirect(location=f"{PYGBAG_CDN}/{name}")
+
     app = web.Application()
     app.cleanup_ctx.append(maintenance)
     app.router.add_get("/", index)
     app.router.add_get("/ws", multiplayer.socket)
     app.router.add_get("/preview.png", preview)
     app.router.add_get(r"/{file:game\.apk|game\.tar\.gz|favicon\.png}", asset)
+    app.router.add_get("/cdn/{path:.+}", runtime)
     return app
 
 

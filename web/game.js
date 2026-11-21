@@ -1,0 +1,286 @@
+import { MESSAGE_LIMIT, REDACTED } from "./radio.js";
+import { renderScreen } from "./screens.js";
+
+const SESSION_KEY = "lost-in-transmission";
+const MOVEMENT_KEYS = {
+  ArrowUp: "up", w: "up", ArrowLeft: "left", a: "left",
+  ArrowDown: "down", s: "down", ArrowRight: "right", d: "right",
+};
+
+function readSession() {
+  try {
+    const session = JSON.parse(sessionStorage.getItem(SESSION_KEY));
+    return typeof session?.code === "string" && typeof session.token === "string" ? session : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveSession(session) {
+  try {
+    if (session) sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    else sessionStorage.removeItem(SESSION_KEY);
+  } catch {
+    // The open tab can still reconnect using the session in memory.
+  }
+}
+
+class Game {
+  constructor(root, dialog) {
+    this.root = root;
+    this.dialog = dialog;
+    this.session = readSession();
+    this.state = null;
+    this.stateAt = 0;
+    this.socket = null;
+    this.resuming = false;
+    this.notice = "";
+    this.code = "";
+    this.copied = false;
+    this.draft = [];
+    this.category = "PLACE";
+
+    root.addEventListener("click", (event) => {
+      const button = event.target.closest("button[data-action]");
+      if (button && !button.disabled) this.command(button.dataset.action, button.dataset.value);
+    });
+    root.addEventListener("input", (event) => {
+      if (event.target.id !== "room-code") return;
+      this.code = event.target.value.replace(/[^a-z0-9]/gi, "").toUpperCase().slice(0, 5);
+      if (event.target.value !== this.code) event.target.value = this.code;
+      document.getElementById("join-room").disabled = !this.online || this.code.length !== 5;
+    });
+    root.addEventListener("submit", (event) => {
+      if (event.target.id !== "join-form") return;
+      event.preventDefault();
+      this.command("join");
+    });
+    dialog.addEventListener("close", () => {
+      if (dialog.returnValue === "leave") this.command("leave");
+    });
+    document.addEventListener("keydown", (event) => this.onKey(event));
+
+    this.render();
+    this.connect();
+    setInterval(() => this.updateTimer(), 250);
+  }
+
+  get online() {
+    return this.socket?.readyState === WebSocket.OPEN && !this.resuming;
+  }
+
+  get available() {
+    return this.online && Boolean(this.state?.paired);
+  }
+
+  get composing() {
+    return this.available && this.state.phase === "active" &&
+      this.state.stage === (this.state.role === "handler" ? "order" : "report");
+  }
+
+  get moving() {
+    return this.available && this.state.phase === "active" &&
+      this.state.role === "agent" && this.state.stage === "moves";
+  }
+
+  get canDecrypt() {
+    return this.available && this.state.key && this.state.incoming?.tiles.includes(REDACTED);
+  }
+
+  get status() {
+    if (!this.online) {
+      return this.session ? "Reconnecting to the channel…" : "Connecting to the channel…";
+    }
+    if (this.state && this.state.phase !== "lobby" && !this.state.paired) {
+      return "Partner disconnected. Channel paused.";
+    }
+    return this.notice;
+  }
+
+  connect() {
+    const scheme = location.protocol === "https:" ? "wss:" : "ws:";
+    const socket = new WebSocket(`${scheme}//${location.host}/ws`);
+    this.socket = socket;
+    socket.addEventListener("open", () => {
+      this.resuming = Boolean(this.session);
+      this.notice = "";
+      if (this.session) this.send({ type: "resume", ...this.session });
+      this.render();
+    });
+    socket.addEventListener("message", (event) => this.receive(JSON.parse(event.data)));
+    socket.addEventListener("close", () => {
+      if (this.state?.phase === "active" && this.state.paired && !this.resuming) {
+        this.state.seconds = this.remainingSeconds();
+      }
+      this.resuming = false;
+      this.render();
+      setTimeout(() => this.connect(), 2000);
+    });
+  }
+
+  send(message) {
+    if (this.socket?.readyState !== WebSocket.OPEN) return false;
+    this.socket.send(JSON.stringify(message));
+    return true;
+  }
+
+  receive(message) {
+    switch (message.type) {
+      case "joined":
+        this.session = { code: message.code, token: message.token };
+        saveSession(this.session);
+        this.copied = false;
+        break;
+      case "state": {
+        const old = this.state;
+        const newScreen = !old || old.phase !== message.phase || old.stage !== message.stage || old.mission !== message.mission;
+        if (newScreen) {
+          this.draft = [];
+          this.notice = "";
+          this.category = message.stage === "report" ? "REPORT" : "PLACE";
+        }
+        this.resuming = false;
+        this.state = message;
+        this.stateAt = performance.now();
+        this.render();
+        if (newScreen) window.scrollTo(0, 0);
+        break;
+      }
+      case "left":
+      case "resume_failed":
+        this.session = null;
+        saveSession(null);
+        this.state = null;
+        this.resuming = false;
+        this.notice = message.text ?? "";
+        this.draft = [];
+        this.dialog.close();
+        this.render();
+        window.scrollTo(0, 0);
+        break;
+      case "notice":
+        this.notice = message.text;
+        this.render();
+        break;
+    }
+  }
+
+  async copyCode() {
+    const room = this.state;
+    try {
+      await navigator.clipboard.writeText(room.code);
+      if (this.state !== room) return;
+      this.copied = true;
+      clearTimeout(this.copyTimeout);
+      this.copyTimeout = setTimeout(() => {
+        this.copied = false;
+        this.render();
+      }, 2000);
+    } catch {
+      if (this.state !== room) return;
+      this.notice = "Couldn't copy the code. Read it out to Wren instead.";
+    }
+    this.render();
+  }
+
+  command(action, value) {
+    if (action === "copy" && this.state) {
+      this.copyCode();
+      return;
+    }
+    if (!this.online) return;
+    if (action === "confirm-leave") {
+      this.dialog.returnValue = "";
+      this.dialog.showModal();
+      return;
+    }
+    if (action === "category" || action === "tile" || action === "remove") {
+      if (!this.composing) return;
+      if (action === "category") this.category = value;
+      if (action === "tile" && this.draft.length < MESSAGE_LIMIT) this.draft.push(value);
+      if (action === "remove") this.draft.splice(Number(value), 1);
+      this.render();
+      return;
+    }
+    let message = { type: action };
+    if (action === "transmit") {
+      if (!this.composing || !this.draft.length) return;
+      message = { type: "radio", tiles: this.draft };
+    } else if (action === "join") {
+      if (this.state || this.code.length !== 5) return;
+      message.code = this.code;
+    } else if (action === "move") {
+      message.direction = value;
+    }
+    if (this.send(message)) {
+      this.notice = "";
+      if (action === "transmit") this.draft = [];
+      this.render();
+    }
+  }
+
+  onKey(event) {
+    if (event.repeat || event.isComposing || event.ctrlKey || event.metaKey || event.altKey || this.dialog.open) return;
+    const key = event.key.toLowerCase();
+    if (event.target instanceof HTMLInputElement) {
+      if (key === "escape") event.target.blur();
+      return;
+    }
+    if (key === "escape" && this.state) {
+      this.command("confirm-leave");
+      return;
+    }
+    if (key === "enter") {
+      if (event.target.matches?.("button:focus-visible")) return;
+      event.preventDefault();
+      if (!this.state) document.getElementById("room-code")?.focus();
+      else if (this.composing) this.command("transmit");
+      else if (this.moving) this.command("end_moves");
+      else if (this.available && this.state.phase !== "active" && !this.state.ready.includes(this.state.role)) {
+        this.command("ready");
+      }
+      return;
+    }
+    if (!this.moving || this.state.points === 0) return;
+    const direction = MOVEMENT_KEYS[event.key] ?? MOVEMENT_KEYS[key];
+    if (typeof direction === "string" || key === "e") {
+      event.preventDefault();
+      if (key === "e") this.command("interact");
+      else this.command("move", direction);
+    }
+  }
+
+  remainingSeconds() {
+    return Math.max(0, this.state.seconds - (performance.now() - this.stateAt) / 1000);
+  }
+
+  updateTimer() {
+    const timer = document.getElementById("timer");
+    if (!timer) return;
+    const seconds = Math.floor(this.available ? this.remainingSeconds() : this.state.seconds);
+    const minutes = String(Math.floor(seconds / 60)).padStart(2, "0");
+    const text = `${minutes}:${String(seconds % 60).padStart(2, "0")}`;
+    if (timer.textContent !== text) timer.textContent = text;
+  }
+
+  render() {
+    const focused = document.activeElement;
+    const inGame = this.root.contains(focused);
+    const selection = inGame && focused instanceof HTMLInputElement ? focused.selectionStart : null;
+    this.root.replaceChildren(renderScreen(this));
+    if (inGame) {
+      let replacement;
+      if (focused.id) {
+        replacement = document.getElementById(focused.id);
+      } else if (focused.dataset.action) {
+        replacement = [...this.root.querySelectorAll("button[data-action]")].find((button) =>
+          button.dataset.action === focused.dataset.action && button.dataset.value === focused.dataset.value);
+      }
+      replacement?.focus({ preventScroll: true });
+      if (selection !== null) replacement?.setSelectionRange(selection, selection);
+    }
+    this.updateTimer();
+  }
+}
+
+new Game(document.getElementById("game"), document.getElementById("leave-dialog"));

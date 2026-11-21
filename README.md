@@ -6,21 +6,16 @@ Two-player co-op spy game set in Kessel, 1974. Magpie guides Wren through three 
 
 ## Run a local session
 
-Use Python 3.10 or newer. From the repository root:
+Use Node.js 24 or newer. From the repository root:
 
 ```sh
-python -m venv .venv
-source .venv/bin/activate
-python -m pip install -r requirements.txt
-python -m pygbag --build --ume_block 0 --title "Lost in Transmission" game
-python server.py
+npm ci
+npm start
 ```
 
-In Windows PowerShell, activate the environment with `.\.venv\Scripts\Activate.ps1`.
+Open the local game in two browser tabs or windows. One player creates a room as Magpie and shares the displayed code. The other joins as Wren using that code. [Local game](http://localhost:8000/)
 
-Open the local preview in two browser tabs or windows. The lobby opens automatically once the browser loads the Pygbag WebAssembly runtime. One player creates a room as the handler, and the other joins as the agent using the displayed room code. [Local preview](http://localhost:8000/)
-
-To use the desktop client, keep the server running and launch each client with `python game/main.py`. Set `LIT_SERVER_URL` to a different WebSocket endpoint when connecting a desktop client to another server.
+Run `npm test` to check the game rules and multiplayer connection.
 
 ## Play
 
@@ -33,17 +28,17 @@ To use the desktop client, keep the server running and launch each client with `
 
 ## Play from separate devices
 
-Run the server with `python server.py --host 0.0.0.0` and open `http://SERVER_IP:8000` on each device on the same network. For internet play, put the Python server behind an HTTPS reverse proxy that forwards both the game page and the WebSocket upgrade at `/ws` on the same hostname. Rooms and ECHO's memory live in server memory for the session.
+Run `npm start -- --host 0.0.0.0` and open `http://SERVER_IP:8000` on each device on the same network. For internet play, put the Node server behind an HTTPS reverse proxy that forwards both the game page and the WebSocket upgrade at `/ws` on the same hostname. Rooms and ECHO's memory live in server memory for the session.
 
 ## Project layout
 
-- `game/main.py` runs the Pygame client on desktop and in the browser.
-- `game/screens.py` renders the portrait lobby, briefing, role screens, and debrief.
-- `game/radio.py` defines the shared word-tile vocabulary.
-- `game/transport.py` connects to the multiplayer WebSocket using the browser or desktop networking APIs.
-- `operation.py` defines the mission maps, role visibility, objectives, and ECHO's radio rules.
-- `server.py` hosts the client and keeps multiplayer rooms in sync. It adds link-preview metadata (Open Graph) to the page so shared links show a card in Discord and other apps.
-- `web/` holds the logo (shown in link previews) and the browser tab icons.
+- `web/index.html` and `web/style.css` define the browser page and case-file design.
+- `web/game.js` handles controls and connects the browser to the multiplayer WebSocket.
+- `web/screens.js` renders the lobby, briefing, role screens, and debrief.
+- `web/radio.js` defines the word-tile vocabulary shared by the client and server.
+- `operation.js` defines the mission maps, role visibility, objectives, and ECHO's radio rules.
+- `server.js` serves the game and keeps multiplayer rooms in sync.
+- `web/` also holds the link-preview logo and browser icons.
 
 ## Docker
 
@@ -51,9 +46,7 @@ Run the server with `python server.py --host 0.0.0.0` and open `http://SERVER_IP
 docker compose up -d --build
 ```
 
-This builds the browser client with pygbag and runs `server.py`, which serves the game and the `/ws` WebSocket on http://127.0.0.1:8620.
-
-The image also copies the Pygbag Python runtime into the build (`deploy/mirror_runtime.py`), so players download it from our server at `/cdn/` instead of from GitHub Pages, which can take over a minute to load.
+The container serves the browser game and the `/ws` WebSocket on http://127.0.0.1:8620.
 
 ## Deploying
 

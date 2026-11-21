@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0f1416">
+  <!-- LINK_PREVIEW -->
+  <title>Lost in Transmission</title>
+  <link rel="icon" href="/favicon.png" type="image/png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="stylesheet" href="/style.css">
+  <script type="module" src="/game.js"></script>
+</head>
+<body>
+  <main id="game">
+    <p role="status">Connecting to the channel…</p>
+  </main>
+  <dialog id="leave-dialog" class="paper" aria-labelledby="leave-heading">
+    <h2 id="leave-heading">Close the room?</h2>
+    <p>Both players will return to the lobby.</p>
+    <form method="dialog" class="split">
+      <button value="stay" autofocus>Stay</button>
+      <button value="leave" class="primary">Close room</button>
+    </form>
+  </dialog>
+  <noscript><p>Enable JavaScript to join a room.</p></noscript>
+</body>
+</html>

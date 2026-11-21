@@ -1,10 +1,9 @@
-# Python
-__pycache__/
-*.py[cod]
+# Local dependencies and builds
+node_modules/
 .venv/
 venv/
-
-# Pygbag builds
+__pycache__/
+*.py[cod]
 build/
 
 # Editor / OS junk

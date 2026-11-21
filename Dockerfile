@@ -16,6 +16,7 @@ COPY requirements.txt ./
 RUN pip install --no-cache-dir $(grep -E '^aiohttp' requirements.txt)
 
 COPY server.py operation.py ./
+COPY web ./web
 COPY game/radio.py ./game/
 COPY --from=build /src/game/build/web ./game/build/web
 

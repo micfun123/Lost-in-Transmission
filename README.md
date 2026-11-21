@@ -40,7 +40,8 @@ Run the server with `python server.py --host 0.0.0.0` and open `http://SERVER_IP
 - `game/radio.py` defines the shared word-tile vocabulary.
 - `game/transport.py` connects to the multiplayer WebSocket using the browser or desktop networking APIs.
 - `operation.py` defines the mission maps, role visibility, objectives, and ECHO's radio rules.
-- `server.py` hosts the client and keeps multiplayer rooms in sync.
+- `server.py` hosts the client and keeps multiplayer rooms in sync. It adds link-preview metadata (Open Graph) to the page so shared links show a card in Discord and other apps.
+- `web/preview.png` is the 1200×630 image shown in link previews.
 
 ## Docker
 

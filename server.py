@@ -1,6 +1,7 @@
 import argparse
 import asyncio
 from contextlib import suppress
+import html
 import json
 from pathlib import Path
 import secrets
@@ -13,8 +14,36 @@ from operation import Room
 
 
 WEB_BUILD = Path(__file__).resolve().parent / "game" / "build" / "web"
+PREVIEW = Path(__file__).resolve().parent / "web" / "preview.png"
 PYGBAG_CDN = "https://pygame-web.github.io/cdn"
 CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+TITLE = "Lost in Transmission"
+DESCRIPTION = (
+    "Two-player co-op spy game set in Kessel, 1974. Guide your agent through three cases "
+    "over a word-tile radio while ECHO learns your words and jams the signal."
+)
+
+
+def embed_tags(base):
+    # Link previews (Discord, Slack, etc.) need absolute URLs.
+    tags = {
+        "description": DESCRIPTION,
+        "theme-color": "#F2A541",
+        "og:type": "website",
+        "og:site_name": TITLE,
+        "og:title": TITLE,
+        "og:description": DESCRIPTION,
+        "og:url": f"{base}/",
+        "og:image": f"{base}/preview.png",
+        "og:image:width": "1200",
+        "og:image:height": "630",
+        "og:image:alt": "Lost in Transmission title card",
+        "twitter:card": "summary_large_image",
+    }
+    return "".join(
+        f'<meta {"property" if key.startswith("og:") else "name"}="{key}" content="{html.escape(value)}">'
+        for key, value in tags.items()
+    )
 
 
 class Client:
@@ -191,7 +220,15 @@ def create_app():
                 launch_query = f"&{query}"
             if launch_query != query:
                 raise web.HTTPTemporaryRedirect(location=f"/?{launch_query}", headers=headers)
-        return web.FileResponse(path, headers=headers)
+        # Behind the reverse proxy the public site is served over HTTPS.
+        scheme = "https" if "X-Forwarded-For" in request.headers else request.scheme
+        page = path.read_text(encoding="utf-8").replace(
+            "<head>", f"<head>{embed_tags(f'{scheme}://{request.host}')}", 1
+        )
+        return web.Response(text=page, content_type="text/html", headers=headers)
+
+    async def preview(_request):
+        return web.FileResponse(PREVIEW, headers={"Cache-Control": "public, max-age=86400"})
 
     async def asset(request):
         return web.FileResponse(WEB_BUILD / request.match_info["file"], headers={"Cache-Control": "no-cache"})
@@ -200,6 +237,7 @@ def create_app():
     app.cleanup_ctx.append(maintenance)
     app.router.add_get("/", index)
     app.router.add_get("/ws", multiplayer.socket)
+    app.router.add_get("/preview.png", preview)
     app.router.add_get(r"/{file:game\.apk|game\.tar\.gz|favicon\.png}", asset)
     return app
 

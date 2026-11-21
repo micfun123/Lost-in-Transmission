@@ -173,28 +173,34 @@ def create_app():
         with suppress(asyncio.CancelledError):
             await task
 
-    async def index(_request):
+    async def index(request):
         path = WEB_BUILD / "index.html"
         if not path.is_file():
             return web.Response(
                 status=503,
                 text="Build the browser client with python -m pygbag --build --ume_block 0 game.",
             )
-        return web.FileResponse(path, headers={"Cache-Control": "no-cache"})
+        headers = {"Cache-Control": "no-cache"}
+        if request.url.host == "localhost":
+            query = request.rel_url.raw_query_string
+            launch_query = query
+            # Pygbag reads PYGPI early and treats its first argument as an interpreter selector.
+            if "PYGPI" not in request.query:
+                launch_query += f"&PYGPI={PYGBAG_CDN}/"
+            elif query.startswith("PYGPI="):
+                launch_query = f"&{query}"
+            if launch_query != query:
+                raise web.HTTPTemporaryRedirect(location=f"/?{launch_query}", headers=headers)
+        return web.FileResponse(path, headers=headers)
 
     async def asset(request):
         return web.FileResponse(WEB_BUILD / request.match_info["file"], headers={"Cache-Control": "no-cache"})
-
-    async def pygame_wheel(request):
-        raise web.HTTPTemporaryRedirect(location=f"{PYGBAG_CDN}/{request.match_info['wheel']}")
 
     app = web.Application()
     app.cleanup_ctx.append(maintenance)
     app.router.add_get("/", index)
     app.router.add_get("/ws", multiplayer.socket)
     app.router.add_get(r"/{file:game\.apk|game\.tar\.gz|favicon\.png}", asset)
-    # Pygbag looks for its Pygame wheel on the local origin when launched on localhost.
-    app.router.add_get(r"/cdn/{wheel:cp[0-9]+/pygame_ce-[A-Za-z0-9_.-]+\.whl}", pygame_wheel)
     return app
 
 

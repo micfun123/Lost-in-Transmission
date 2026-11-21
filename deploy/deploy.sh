@@ -7,3 +7,6 @@ git fetch -q origin main
 git checkout -q -B main origin/main
 docker compose up -d --build
 docker image prune -f
+
+# The host nginx site links to deploy/transmission.michaelrbparker.com.conf
+nginx -t -q && systemctl reload nginx

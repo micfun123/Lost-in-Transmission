@@ -1,3 +1,5 @@
+<p align="center"><img src="web/logo.jpg" alt="Lost in Transmission logo" width="256"></p>
+
 # Lost in Transmission
 
 Two-player co-op spy game set in Kessel, 1974. Magpie guides Wren through three cases over a word-tile radio. ECHO learns recurring words and interferes with later transmissions.
@@ -41,7 +43,7 @@ Run the server with `python server.py --host 0.0.0.0` and open `http://SERVER_IP
 - `game/transport.py` connects to the multiplayer WebSocket using the browser or desktop networking APIs.
 - `operation.py` defines the mission maps, role visibility, objectives, and ECHO's radio rules.
 - `server.py` hosts the client and keeps multiplayer rooms in sync. It adds link-preview metadata (Open Graph) to the page so shared links show a card in Discord and other apps.
-- `web/preview.png` is the 1200×630 image shown in link previews.
+- `web/` holds the logo (shown in link previews) and the browser tab icons.
 
 ## Docker
 

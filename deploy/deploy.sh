@@ -1,8 +1,12 @@
 #!/usr/bin/env bash
-# Pull the latest code and rebuild the container. Run on the server.
+# Update to the latest main and rebuild the container. Run on the server.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
-git pull --ff-only
+git fetch -q origin main
+git checkout -q -B main origin/main
 docker compose up -d --build
 docker image prune -f
+
+# The host nginx site links to deploy/transmission.michaelrbparker.com.conf
+nginx -t -q && systemctl reload nginx

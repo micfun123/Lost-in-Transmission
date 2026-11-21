@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0f1416">
+  <!-- LINK_PREVIEW -->
+  <title>The Shore — Solent Signal Bureau (Station PO1)</title>
+  <link rel="icon" href="/favicon.png" type="image/png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="stylesheet" href="/shared/bureau.css">
+  <link rel="stylesheet" href="/bottles/bottles.css">
+  <script defer src="/shared/header.js"></script>
+  <script type="module" src="/bottles/bottles.js"></script>
+</head>
+<body class="bureau-page">
+  <main class="bureau-shell">
+    <section class="shore-hero">
+      <div class="shore-hero__copy">
+        <span class="bureau-caption">STATION PO1 · MARITIME DRIFT DESK · EST. 1974</span>
+        <h1 class="bureau-title shore-hero__title">The Shore</h1>
+        <p class="shore-hero__lede">
+          An unreliable, tide-driven dispatch service across the Solent. Cast a sealed note into Portsmouth Harbour,
+          comb the shingle for washed-up transmissions, and mourn the bottles claimed by gulls, hovercraft, or the M27.
+        </p>
+      </div>
+      <div class="shore-hero__badges" aria-hidden="true">
+        <span class="bureau-stamp bureau-stamp--water">WATER DAMAGED</span>
+        <span class="bureau-stamp bureau-stamp--classified">PO1 CENSOR ACTIVE</span>
+      </div>
+    </section>
+
+    <section class="ocean-telemetry bureau-console" aria-label="Solent ocean telemetry">
+      <div class="ocean-telemetry__stat">
+        <span class="bureau-caption">ASHORE</span>
+        <strong id="stat-shore">—</strong>
+      </div>
+      <div class="ocean-telemetry__stat">
+        <span class="bureau-caption">ADRIFT NOW</span>
+        <strong id="stat-drifting">—</strong>
+      </div>
+      <div class="ocean-telemetry__stat">
+        <span class="bureau-caption">SO14 QUARANTINED</span>
+        <strong id="stat-contaminated">—</strong>
+      </div>
+      <div class="ocean-telemetry__stat">
+        <span class="bureau-caption">LOST AT SEA</span>
+        <strong id="stat-lost">—</strong>
+      </div>
+      <div class="ocean-telemetry__tide" id="stat-tide" role="status">
+        Monitoring Portsmouth Harbour tide gauge…
+      </div>
+    </section>
+
+    <div class="shore-grid">
+      <section class="shore-column" aria-labelledby="beachcomber-heading">
+        <div class="shore-panel-head">
+          <div>
+            <span class="bureau-caption">RECOVERY UNIT · SOUTHSEA SHINGLE</span>
+            <h2 id="beachcomber-heading" class="bureau-title">Beachcomber</h2>
+          </div>
+          <button type="button" id="beachcomb-btn" class="bureau-btn bureau-btn--primary">
+            Search the Shore
+          </button>
+        </div>
+
+        <article id="bottle-card" class="bureau-paper bottle-card" aria-live="polite">
+          <p class="bottle-card__loading">Walking the shingle at Southsea Beach…</p>
+        </article>
+      </section>
+
+      <section class="shore-column" aria-labelledby="throw-heading">
+        <div class="shore-panel-head">
+          <div>
+            <span class="bureau-caption">OUTBOUND DISPATCH · CLARENCE PIER</span>
+            <h2 id="throw-heading" class="bureau-title">Throw a Bottle</h2>
+          </div>
+        </div>
+
+        <form id="throw-form" class="bureau-console throw-form" novalidate>
+          <div class="form-field">
+            <label for="bottle-message">
+              <span>Message for the Solent</span>
+              <span id="char-count" class="form-counter">0 / 500</span>
+            </label>
+            <textarea
+              id="bottle-message"
+              name="message"
+              rows="4"
+              maxlength="500"
+              required
+              placeholder="Write a note, confession, or coastal rumour to seal inside a glass bottle…"
+            ></textarea>
+          </div>
+
+          <div class="form-field">
+            <label for="bottle-alias">
+              <span>Sender Alias <small>(optional)</small></span>
+            </label>
+            <input
+              id="bottle-alias"
+              name="senderAlias"
+              type="text"
+              maxlength="40"
+              placeholder="e.g. Southsea Pier, Spitbank Lookout"
+            >
+          </div>
+
+          <p class="throw-form__notice">
+            <strong>Maritime Authority Advisory:</strong> 65% drift ashore in 15–45s, 20% risk SO14 contamination,
+            and 15% are lost at sea immediately. Unseemly references to our westerly neighbour are auto-redacted.
+          </p>
+
+          <div class="throw-form__actions">
+            <button type="submit" id="throw-submit" class="bureau-btn bureau-btn--primary">
+              Cork &amp; Cast into Solent
+            </button>
+            <span id="throw-error" class="throw-form__error" role="alert"></span>
+          </div>
+        </form>
+
+        <section id="launch-receipt" class="launch-receipt" hidden aria-live="polite"></section>
+      </section>
+    </div>
+
+    <section class="graveyard-section" aria-labelledby="graveyard-heading">
+      <div class="shore-panel-head">
+        <div>
+          <span class="bureau-caption">ADMIRALTY LOSS LEDGER · LAST 10 CASUALTIES</span>
+          <h2 id="graveyard-heading" class="bureau-title">The Solent Graveyard</h2>
+        </div>
+        <button type="button" id="graveyard-refresh" class="bureau-btn">
+          Refresh Ledger
+        </button>
+      </div>
+
+      <ol id="graveyard-list" class="graveyard-list" aria-live="polite"></ol>
+    </section>
+
+    <footer class="bureau-footer">
+      <span>SOLENT SIGNAL BUREAU · STATION PO1 · PORTSMOUTH</span>
+      <span>HACK POMPEY · THEME: UNUSUALITY</span>
+    </footer>
+  </main>
+</body>
+</html>

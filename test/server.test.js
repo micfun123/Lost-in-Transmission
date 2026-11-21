@@ -4,12 +4,28 @@ import test from "node:test";
 import { WebSocket } from "ws";
 import { createGameServer } from "../server.js";
 
-test("serves the game and link preview without a build step", async (t) => {
+test("serves the portal, The Shore, Lost in Transmission, and shared assets without a build step", async (t) => {
   const base = await startServer(t);
-  const page = await fetch(base, { headers: { "X-Forwarded-Proto": "https" } });
-  assert.equal(page.status, 200);
-  const html = await page.text();
+
+  const portal = await fetch(base, { headers: { "X-Forwarded-Proto": "https" } });
+  assert.equal(portal.status, 200);
+  const portalHtml = await portal.text();
+  assert.ok(portalHtml.includes("Solent Signal Bureau"));
+  assert.ok(portalHtml.includes('href="/bottles"'));
+  assert.ok(portalHtml.includes('href="/transmission"'));
+  assert.ok(portalHtml.includes(`content="${base.replace("http:", "https:")}/logo.jpg"`));
+
+  const bottlesPage = await fetch(`${base}/bottles`);
+  assert.equal(bottlesPage.status, 200);
+  const bottlesHtml = await bottlesPage.text();
+  assert.ok(bottlesHtml.includes('<script type="module" src="/bottles/bottles.js">'));
+  assert.ok(bottlesHtml.includes('<script defer src="/shared/header.js">'));
+
+  const gamePage = await fetch(`${base}/transmission`, { headers: { "X-Forwarded-Proto": "https" } });
+  assert.equal(gamePage.status, 200);
+  const html = await gamePage.text();
   assert.ok(html.includes('<script type="module" src="/game.js">'));
+  assert.ok(html.includes('<script defer src="/shared/header.js">'));
   assert.ok(html.includes(`content="${base.replace("http:", "https:")}/logo.jpg"`));
   assert.ok(html.includes('rel="icon" href="/favicon.png"'));
   assert.ok(html.includes('rel="apple-touch-icon" href="/apple-touch-icon.png"'));
@@ -19,6 +35,9 @@ test("serves the game and link preview without a build step", async (t) => {
     ["/radio.js", "text/javascript"], ["/style.css", "text/css"],
     ["/logo.jpg", "image/jpeg"], ["/favicon.png", "image/png"], ["/apple-touch-icon.png", "image/png"],
     ["/assets/fonts/SpecialElite-Regular.ttf", "font/ttf"],
+    ["/shared/bureau.css", "text/css"], ["/shared/header.js", "text/javascript"],
+    ["/portal/portal.css", "text/css"], ["/portal/portal.js", "text/javascript"],
+    ["/bottles/bottles.css", "text/css"], ["/bottles/bottles.js", "text/javascript"],
   ];
   for (const [path, mime] of assets) {
     const response = await fetch(base + path);

@@ -5,3 +5,11 @@
 !operation.js
 !web/
 !web/**
+!data/
+!data/**
+!shared/
+!shared/**
+!portal/
+!portal/**
+!apps/
+!apps/**

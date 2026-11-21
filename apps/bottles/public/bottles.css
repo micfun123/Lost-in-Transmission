@@ -1,0 +1,466 @@
+.shore-hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px 24px;
+  margin-bottom: 20px;
+}
+
+.shore-hero__copy {
+  max-width: 680px;
+}
+
+.shore-hero__title {
+  font-size: clamp(2rem, 5vw, 2.8rem);
+  margin-top: 6px;
+  color: var(--light);
+}
+
+.shore-hero__lede {
+  margin: 10px 0 0;
+  color: var(--muted);
+}
+
+.shore-hero__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  padding-top: 8px;
+}
+
+.ocean-telemetry {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) minmax(220px, 1.8fr);
+  gap: 12px 16px;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.ocean-telemetry__stat {
+  display: grid;
+  gap: 2px;
+  padding-right: 12px;
+  border-right: 1px solid var(--line);
+}
+
+.ocean-telemetry__stat strong {
+  font-size: 1.55rem;
+  color: var(--amber);
+  line-height: 1.1;
+}
+
+.ocean-telemetry__tide {
+  font-size: 0.82rem;
+  color: var(--signal);
+  line-height: 1.4;
+}
+
+.shore-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.shore-column {
+  display: grid;
+  gap: 14px;
+}
+
+.shore-panel-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.shore-panel-head h2 {
+  font-size: 1.45rem;
+  margin-top: 3px;
+}
+
+/* Recovered bottle dossier card */
+.bottle-card {
+  min-height: 310px;
+  display: grid;
+  gap: 16px;
+  align-content: start;
+  overflow: hidden;
+  transition: transform 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+}
+
+.bottle-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 92% 12%, rgb(44 91 110 / 0.14), transparent 34%),
+    radial-gradient(circle at 8% 88%, rgb(138 110 72 / 0.14), transparent 36%);
+}
+
+.bottle-card > * {
+  position: relative;
+}
+
+.bottle-card__loading {
+  margin: 0;
+  color: var(--faded);
+}
+
+.bottle-card__top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  padding-bottom: 12px;
+  border-bottom: 1px dashed var(--rule);
+}
+
+.bottle-card__meta {
+  display: grid;
+  gap: 3px;
+}
+
+.bottle-card__id {
+  font-size: 0.74rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--faded);
+}
+
+.bottle-card__sender {
+  font-family: var(--title);
+  font-size: 1.15rem;
+  color: var(--ink);
+}
+
+.bottle-card__stamps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.bottle-card__message {
+  margin: 0;
+  padding: 14px 16px;
+  background: rgb(255 255 255 / 0.42);
+  border-left: 3px solid var(--ink);
+  font-family: var(--title);
+  font-size: 1.2rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.bottle-card__redacted {
+  display: inline-block;
+  padding: 1px 6px;
+  margin-inline: 1px;
+  background: #171512;
+  color: #f3e4c3;
+  font-family: var(--mono);
+  font-size: 0.72em;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  border-radius: 2px;
+  vertical-align: baseline;
+}
+
+.bottle-card__warning {
+  padding: 10px 12px;
+  border: 1px solid rgb(181 31 20 / 0.45);
+  background: rgb(181 31 20 / 0.09);
+  color: #7d170f;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border-radius: 2px;
+}
+
+.drift-log {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 6px;
+}
+
+.drift-log__heading {
+  margin-bottom: 6px;
+}
+
+.drift-log li {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 0.82rem;
+  color: #3a332a;
+}
+
+.drift-log__bullet {
+  color: var(--faded);
+  font-weight: 600;
+  flex: none;
+}
+
+.drift-log li.is-warning {
+  color: #9e1b11;
+  font-weight: 600;
+}
+
+.drift-log li.is-warning .drift-log__bullet {
+  color: #9e1b11;
+}
+
+/* SO14 Contaminated soggy & garbled styling */
+.bottle-card.is-contaminated {
+  background:
+    radial-gradient(circle at 82% 20%, rgb(132 108 58 / 0.25), transparent 36%),
+    radial-gradient(circle at 18% 76%, rgb(92 106 76 / 0.22), transparent 42%),
+    #dfd4b6;
+  border-color: #a3321f;
+  box-shadow: 0 12px 32px rgb(163 50 31 / 0.25);
+}
+
+.bottle-card.is-contaminated .bottle-card__message {
+  border-left-color: #a3321f;
+  background: rgb(181 31 20 / 0.06);
+  color: #2c1e18;
+  text-shadow: 0.6px 0.5px 1.2px rgb(68 58 34 / 0.45);
+  transform: rotate(-0.45deg);
+  filter: saturate(0.9);
+}
+
+.bottle-card__biohazard {
+  position: absolute;
+  right: 14px;
+  bottom: 12px;
+  font-size: 3.1rem;
+  line-height: 1;
+  color: rgb(181 31 20 / 0.14);
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Throw form */
+.throw-form {
+  display: grid;
+  gap: 14px;
+}
+
+.form-field {
+  display: grid;
+  gap: 6px;
+}
+
+.form-field label {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--light);
+}
+
+.form-field label small {
+  font-weight: 400;
+  color: var(--muted);
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.form-counter {
+  font-size: 0.74rem;
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.throw-form textarea,
+.throw-form input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: #0e1417;
+  color: var(--light);
+  font: 0.92rem/1.45 var(--mono);
+  resize: vertical;
+}
+
+.throw-form textarea:focus,
+.throw-form input:focus {
+  outline: 2px solid rgb(242 165 65 / 0.5);
+  border-color: var(--amber);
+}
+
+.throw-form__notice {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--muted);
+  padding: 10px 12px;
+  background: rgb(255 255 255 / 0.03);
+  border-left: 2px solid var(--amber);
+}
+
+.throw-form__notice strong {
+  color: var(--amber);
+}
+
+.throw-form__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+}
+
+.throw-form__error {
+  color: var(--red-bright);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+/* Launch receipt & live drift tracker */
+.launch-receipt {
+  padding: 16px 18px;
+  border-radius: 3px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  display: grid;
+  gap: 10px;
+}
+
+.launch-receipt--drifting {
+  border-color: rgb(62 168 156 / 0.6);
+}
+
+.launch-receipt--contaminated {
+  border-color: rgb(217 75 52 / 0.75);
+}
+
+.launch-receipt--lost {
+  border-color: rgb(163 50 31 / 0.85);
+  background: #201514;
+}
+
+.launch-receipt__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.launch-receipt__title {
+  font-family: var(--title);
+  font-size: 1.1rem;
+  margin: 0;
+}
+
+.launch-receipt__censor {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--amber);
+}
+
+.launch-receipt__body {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--light);
+}
+
+.drift-progress {
+  height: 8px;
+  border-radius: 999px;
+  background: #0d1214;
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+
+.drift-progress__bar {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--teal), var(--signal));
+  transition: width 0.35s linear;
+}
+
+.launch-receipt--contaminated .drift-progress__bar {
+  background: linear-gradient(90deg, var(--amber), var(--red-bright));
+}
+
+.launch-receipt__eta {
+  font-size: 0.8rem;
+  color: var(--signal);
+  margin: 0;
+}
+
+/* Graveyard ledger */
+.graveyard-section {
+  margin-top: 32px;
+  display: grid;
+  gap: 14px;
+}
+
+.graveyard-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 12px;
+}
+
+.graveyard-card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-top: 3px solid var(--red);
+  border-radius: 3px;
+  padding: 14px;
+  display: grid;
+  gap: 8px;
+}
+
+.graveyard-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.74rem;
+  color: var(--muted);
+}
+
+.graveyard-card__obituary {
+  margin: 0;
+  font-family: var(--title);
+  font-size: 1rem;
+  color: var(--light);
+  line-height: 1.35;
+}
+
+.graveyard-card__alias {
+  font-size: 0.76rem;
+  color: var(--amber);
+}
+
+@media (max-width: 860px) {
+  .ocean-telemetry {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .ocean-telemetry__stat:nth-child(2n) {
+    border-right: none;
+  }
+  .ocean-telemetry__tide {
+    grid-column: 1 / -1;
+    padding-top: 8px;
+    border-top: 1px solid var(--line);
+  }
+  .shore-grid {
+    grid-template-columns: 1fr;
+  }
+}

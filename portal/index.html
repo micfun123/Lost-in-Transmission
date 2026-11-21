@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0f1416">
+  <!-- LINK_PREVIEW -->
+  <title>Solent Signal Bureau — Station PO1</title>
+  <link rel="icon" href="/favicon.png" type="image/png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="stylesheet" href="/shared/bureau.css">
+  <link rel="stylesheet" href="/portal/portal.css">
+  <script defer src="/shared/header.js"></script>
+  <script type="module" src="/portal/portal.js"></script>
+</head>
+<body class="bureau-page">
+  <main class="bureau-shell">
+    <section class="portal-dossier bureau-paper" aria-labelledby="station-heading">
+      <div class="portal-dossier__head">
+        <div>
+          <span class="bureau-caption">HER MAJESTY'S UNUSUAL COMMUNICATIONS MONITORING · EST. 1974</span>
+          <h1 id="station-heading" class="bureau-title portal-dossier__title">
+            Solent Signal Bureau — Station PO1
+          </h1>
+        </div>
+        <span class="bureau-stamp bureau-stamp--classified">CLASSIFIED // PO1</span>
+      </div>
+
+      <p class="portal-dossier__summary">
+        Welcome to Portsmouth's coastal monitoring outpost. Since the winter of 1974, Station PO1 has tracked
+        two unreliable communication channels across the Solent: sealed glass dispatches tossed to the tide,
+        and encrypted word-tile radio traffic under active <strong>ECHO</strong> interference. Select a desk below to begin your watch.
+      </p>
+
+      <dl class="portal-dossier__meta">
+        <div>
+          <dt>OUTPOST</dt>
+          <dd>Station PO1 · Portsmouth</dd>
+        </div>
+        <div>
+          <dt>EVENT BRIEF</dt>
+          <dd>Hack Pompey — Unusuality</dd>
+        </div>
+        <div>
+          <dt>SOLENT CHANNEL</dt>
+          <dd id="portal-ocean-summary">Reading tide gauge…</dd>
+        </div>
+        <div>
+          <dt>RADIO CHANNEL</dt>
+          <dd>Frequency 74 · ECHO Active</dd>
+        </div>
+      </dl>
+    </section>
+
+    <section class="desk-grid" aria-label="Station PO1 desks">
+      <article class="desk-card bureau-console">
+        <div class="desk-card__top">
+          <div>
+            <span class="bureau-caption">DESK 01 · SOLO-FRIENDLY · ASYNC DRIFT</span>
+            <h2 class="bureau-title desk-card__title">The Shore</h2>
+          </div>
+          <span class="bureau-stamp bureau-stamp--water">WATER DAMAGED</span>
+        </div>
+
+        <p class="desk-card__copy">
+          Cast a message in a bottle into the Solent or comb Southsea shingle for washed-up notes.
+          Bottles drift past Spitbank Fort in 15–45 seconds — unless they pick up <strong>SO14 contamination</strong>
+          or vanish straight into the Solent Graveyard.
+        </p>
+
+        <ul class="desk-card__facts">
+          <li>Instant solo play — pre-seeded Solent shore ready immediately</li>
+          <li>Automatic Portsmouth Maritime Authority censor enabled</li>
+          <li id="portal-bottles-live">Checking bottles currently washed ashore…</li>
+        </ul>
+
+        <div class="desk-card__actions">
+          <a href="/bottles" class="bureau-btn bureau-btn--primary">Open The Shore</a>
+        </div>
+      </article>
+
+      <article class="desk-card bureau-console">
+        <div class="desk-card__top">
+          <div>
+            <span class="bureau-caption">DESK 02 · 2-PLAYER CO-OP · LIVE WEBSOCKET</span>
+            <h2 class="bureau-title desk-card__title">Frequency 74</h2>
+          </div>
+          <span class="bureau-stamp bureau-stamp--classified">LOST IN TRANSMISSION</span>
+        </div>
+
+        <p class="desk-card__copy">
+          Two agents, one unreliable word-tile radio. <strong>Magpie</strong> sees the full map; <strong>Wren</strong>
+          sees only nearby streets. Deliver the package across three cases before <strong>ECHO</strong> learns your
+          favourite words and turns them to static.
+        </p>
+
+        <ul class="desk-card__facts">
+          <li>Create a room as Magpie and share the 5-character code with Wren</li>
+          <li>No free chat — communicate strictly via six-tile radio transmissions</li>
+          <li>ECHO remembers repeated words across all three cases</li>
+        </ul>
+
+        <div class="desk-card__actions">
+          <a href="/transmission" class="bureau-btn bureau-btn--primary">Tune to Frequency 74</a>
+        </div>
+      </article>
+    </section>
+
+    <section class="bureau-console duty-notice" aria-labelledby="duty-heading">
+      <div class="duty-notice__head">
+        <span class="bureau-caption">DUTY OFFICER'S STANDING ORDERS</span>
+        <h2 id="duty-heading" class="bureau-title">Operating Notes for Visiting Inspectors</h2>
+      </div>
+      <div class="duty-notice__cols">
+        <p>
+          <strong>Solo Inspection:</strong> Start at <a href="/bottles">The Shore</a> to comb for washed-up bottles,
+          toss your own dispatch into the tide, and test the Portsmouth Maritime Authority censor.
+        </p>
+        <p>
+          <strong>Paired Field Test:</strong> Open <a href="/transmission">Frequency 74</a> on two devices (or two
+          browser tabs) to experience live co-op stealth over the Station PO1 WebSocket relay.
+        </p>
+      </div>
+    </section>
+
+    <footer class="bureau-footer">
+      <span>SOLENT SIGNAL BUREAU · STATION PO1 · PORTSMOUTH</span>
+      <span>EST. 1974 · ALL DISPATCHES SUBJECT TO TIDE &amp; ECHO</span>
+    </footer>
+  </main>
+</body>
+</html>

@@ -5,43 +5,84 @@ import { pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
 import { WebSocket, WebSocketServer } from "ws";
 import { Room } from "./operation.js";
+import { createBottlesRouter } from "./apps/bottles/router.js";
 
 const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const MAX_ROOMS = 100;
 const EMPTY_ROOM_MS = 600_000;
-const TITLE = "Lost in Transmission";
-const DESCRIPTION = "Two-player co-op spy game set in Kessel, 1974. Guide your agent through three cases over a word-tile radio while ECHO learns your words and jams the signal.";
+
 const WEB_ROOT = new URL("./web/", import.meta.url);
-const INDEX = readFileSync(new URL("index.html", WEB_ROOT), "utf8");
+const PORTAL_ROOT = new URL("./portal/", import.meta.url);
+const SHARED_ROOT = new URL("./shared/", import.meta.url);
+const BOTTLES_ROOT = new URL("./apps/bottles/public/", import.meta.url);
+
+const PAGES = new Map([
+  ["/", {
+    html: readFileSync(new URL("index.html", PORTAL_ROOT), "utf8"),
+    title: "Solent Signal Bureau — Station PO1",
+    siteName: "Solent Signal Bureau (Station PO1)",
+    description: "1974 Portsmouth coastal monitoring outpost hosting The Shore (Message in a Bottle) and Frequency 74 (Lost in Transmission).",
+    path: "/",
+    imageAlt: "Solent Signal Bureau — Station PO1 emblem",
+  }],
+  ["/bottles", {
+    html: readFileSync(new URL("index.html", BOTTLES_ROOT), "utf8"),
+    title: "The Shore — Solent Signal Bureau (Station PO1)",
+    siteName: "Solent Signal Bureau (Station PO1)",
+    description: "An unreliable, tide-driven Message in a Bottle dispatch desk across the Solent. Beware SO14 contamination and ambitious Southsea seagulls.",
+    path: "/bottles",
+    imageAlt: "Solent Signal Bureau — The Shore",
+  }],
+  ["/transmission", {
+    html: readFileSync(new URL("index.html", WEB_ROOT), "utf8"),
+    title: "Lost in Transmission",
+    siteName: "Lost in Transmission",
+    description: "Two-player co-op spy game set in Kessel, 1974. Guide your agent through three cases over a word-tile radio while ECHO learns your words and jams the signal.",
+    path: "/transmission",
+    imageAlt: "Lost in Transmission logo",
+  }],
+]);
+
 const ASSETS = new Map([
-  ["/game.js", "text/javascript; charset=utf-8"],
-  ["/screens.js", "text/javascript; charset=utf-8"],
-  ["/radio.js", "text/javascript; charset=utf-8"],
-  ["/style.css", "text/css; charset=utf-8"],
-  ["/logo.jpg", "image/jpeg"],
-  ["/favicon.png", "image/png"],
-  ["/apple-touch-icon.png", "image/png"],
-  ["/assets/fonts/SpecialElite-Regular.ttf", "font/ttf"],
-  ["/assets/fonts/IBMPlexMono-Regular.ttf", "font/ttf"],
-  ["/assets/fonts/IBMPlexMono-SemiBold.ttf", "font/ttf"],
+  // Lost in Transmission (web/)
+  ["/game.js", [new URL("game.js", WEB_ROOT), "text/javascript; charset=utf-8"]],
+  ["/screens.js", [new URL("screens.js", WEB_ROOT), "text/javascript; charset=utf-8"]],
+  ["/radio.js", [new URL("radio.js", WEB_ROOT), "text/javascript; charset=utf-8"]],
+  ["/style.css", [new URL("style.css", WEB_ROOT), "text/css; charset=utf-8"]],
+  ["/logo.jpg", [new URL("logo.jpg", WEB_ROOT), "image/jpeg"]],
+  ["/favicon.png", [new URL("favicon.png", WEB_ROOT), "image/png"]],
+  ["/apple-touch-icon.png", [new URL("apple-touch-icon.png", WEB_ROOT), "image/png"]],
+  ["/assets/art/player.png", [new URL("assets/art/player.png", WEB_ROOT), "image/png"]],
+  ["/assets/fonts/SpecialElite-Regular.ttf", [new URL("assets/fonts/SpecialElite-Regular.ttf", WEB_ROOT), "font/ttf"]],
+  ["/assets/fonts/IBMPlexMono-Regular.ttf", [new URL("assets/fonts/IBMPlexMono-Regular.ttf", WEB_ROOT), "font/ttf"]],
+  ["/assets/fonts/IBMPlexMono-SemiBold.ttf", [new URL("assets/fonts/IBMPlexMono-SemiBold.ttf", WEB_ROOT), "font/ttf"]],
+  // Shared Station PO1 assets
+  ["/shared/bureau.css", [new URL("bureau.css", SHARED_ROOT), "text/css; charset=utf-8"]],
+  ["/shared/header.js", [new URL("header.js", SHARED_ROOT), "text/javascript; charset=utf-8"]],
+  // Portal Hub assets
+  ["/portal/portal.css", [new URL("portal.css", PORTAL_ROOT), "text/css; charset=utf-8"]],
+  ["/portal/portal.js", [new URL("portal.js", PORTAL_ROOT), "text/javascript; charset=utf-8"]],
+  // The Shore (/bottles) assets
+  ["/bottles/bottles.css", [new URL("bottles.css", BOTTLES_ROOT), "text/css; charset=utf-8"]],
+  ["/bottles/bottles.js", [new URL("bottles.js", BOTTLES_ROOT), "text/javascript; charset=utf-8"]],
 ]);
 const ESCAPES = { "&": "&amp;", '"': "&quot;", "<": "&lt;", ">": "&gt;" };
 
-function embedTags(request) {
+function embedTags(request, page) {
   const scheme = request.headers["x-forwarded-proto"] === "https" || request.headers["x-forwarded-for"]
     ? "https" : "http";
   const base = `${scheme}://${request.headers.host ?? "localhost"}`;
   const tags = {
-    description: DESCRIPTION,
+    description: page.description,
     "og:type": "website",
-    "og:site_name": TITLE,
-    "og:title": TITLE,
-    "og:description": DESCRIPTION,
-    "og:url": `${base}/`,
+    "og:site_name": page.siteName,
+    "og:title": page.title,
+    "og:description": page.description,
+    "og:url": `${base}${page.path}`,
     "og:image": `${base}/logo.jpg`,
     "og:image:width": "512",
     "og:image:height": "512",
-    "og:image:alt": "Lost in Transmission logo",
+    "og:image:alt": page.imageAlt,
     "twitter:card": "summary_large_image",
   };
   return Object.entries(tags).map(([key, value]) => {
@@ -51,29 +92,54 @@ function embedTags(request) {
   }).join("\n  ");
 }
 
-function servePage(request, response) {
-  if (!["GET", "HEAD"].includes(request.method)) {
-    response.writeHead(405, { Allow: "GET, HEAD" }).end();
-    return;
-  }
-  const path = request.url.split("?", 1)[0];
-  if (path === "/") {
-    response.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache" });
-    response.end(INDEX.replace("<!-- LINK_PREVIEW -->", () => embedTags(request)));
-  } else if (ASSETS.has(path)) {
-    readFile(new URL(path.slice(1), WEB_ROOT), (error, content) => {
-      if (error) {
-        response.writeHead(500).end();
-        return;
-      }
-      const type = ASSETS.get(path);
-      const cache = type.startsWith("image/") || type.startsWith("font/") ? "public, max-age=86400" : "no-cache";
-      response.writeHead(200, { "Content-Type": type, "Cache-Control": cache });
-      response.end(content);
-    });
-  } else {
+function createRequestHandler(bottlesRouter) {
+  return async function handleRequest(request, response) {
+    let url;
+    try {
+      url = new URL(request.url, `http://${request.headers.host ?? "localhost"}`);
+    } catch {
+      response.writeHead(400).end();
+      return;
+    }
+
+    if (url.pathname.startsWith("/api/bottles/")) {
+      const handled = await bottlesRouter.handle(request, response, url);
+      if (handled) return;
+      response.writeHead(404, { "Content-Type": "application/json; charset=utf-8" });
+      response.end(JSON.stringify({ error: "Unknown bottles API endpoint." }));
+      return;
+    }
+
+    if (!["GET", "HEAD"].includes(request.method)) {
+      response.writeHead(405, { Allow: "GET, HEAD" }).end();
+      return;
+    }
+
+    const normalizedPath = url.pathname.length > 1 ? url.pathname.replace(/\/+$/, "") : "/";
+    const page = PAGES.get(normalizedPath);
+    if (page) {
+      response.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache" });
+      response.end(request.method === "HEAD" ? undefined : page.html.replace("<!-- LINK_PREVIEW -->", () => embedTags(request, page)));
+      return;
+    }
+
+    const asset = ASSETS.get(url.pathname);
+    if (asset) {
+      const [fileUrl, type] = asset;
+      readFile(fileUrl, (error, content) => {
+        if (error) {
+          response.writeHead(500).end();
+          return;
+        }
+        const cache = type.startsWith("image/") || type.startsWith("font/") ? "public, max-age=86400" : "no-cache";
+        response.writeHead(200, { "Content-Type": type, "Cache-Control": cache });
+        response.end(request.method === "HEAD" ? undefined : content);
+      });
+      return;
+    }
+
     response.writeHead(404).end();
-  }
+  };
 }
 
 class Multiplayer {
@@ -219,9 +285,12 @@ function sameOrigin(request) {
   }
 }
 
-export function createGameServer(now = () => performance.now()) {
+export function createGameServer(nowOrOptions = () => performance.now()) {
+  const options = typeof nowOrOptions === "function" ? { now: nowOrOptions } : (nowOrOptions ?? {});
+  const now = options.now ?? (() => performance.now());
   const multiplayer = new Multiplayer(now);
-  const server = createServer(servePage);
+  const bottlesRouter = createBottlesRouter(options.bottles);
+  const server = createServer(createRequestHandler(bottlesRouter));
   const sockets = new WebSocketServer({ noServer: true, maxPayload: 2048 });
   const responsive = new WeakSet();
   sockets.on("connection", (socket) => {
@@ -275,7 +344,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     const server = createGameServer();
     server.listen(port, values.host, () => {
       const hostname = values.host.includes(":") ? `[${values.host}]` : values.host;
-      console.log(`Lost in Transmission listening at http://${hostname}:${server.address().port}`);
+      console.log(`Solent Signal Bureau (Station PO1) listening at http://${hostname}:${server.address().port}`);
     });
   }
 }

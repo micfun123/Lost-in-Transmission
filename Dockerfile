@@ -8,6 +8,10 @@ RUN npm ci --omit=dev
 
 COPY server.js operation.js ./
 COPY web ./web
+COPY data ./data
+COPY shared ./shared
+COPY portal ./portal
+COPY apps ./apps
 
 USER node
 EXPOSE 8000

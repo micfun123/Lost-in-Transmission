@@ -4,7 +4,7 @@
 
 Two-player co-op spy game set in Kessel, 1974. Magpie guides Wren through three cases over a word-tile radio. ECHO learns recurring words and interferes with later transmissions.
 
-For a full guide to the rules, code, protocol and deployment, see [How it works](docs/HOW-IT-WORKS.md) the [code reference](docs/CODE.md), and [Extending the game](docs/EXTENDING.md) for adding levels and features.
+For a full guide to the rules, code, protocol and deployment, see [How it works](docs/HOW-IT-WORKS.md), the [code reference](docs/CODE.md), and [Extending the game](docs/EXTENDING.md) for adding levels and features.
 
 ## Run a local session
 

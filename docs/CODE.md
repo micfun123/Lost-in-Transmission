@@ -1,6 +1,6 @@
 # Code reference
 
-This is a file-by-file guide to every class and function: what it does, what it takes and returns, and what calls it. For the game rules, the message protocol and deployment, read [How it works](HOW-IT-WORKS.md) first. This page assumes you know those.
+This is a file-by-file guide to every class and function: what it does, what it takes and returns, and what calls it. For the game rules, the message protocol and deployment, read [How it works](HOW-IT-WORKS.md) first. This page assumes you know those. To add levels or features, see [Extending the game](EXTENDING.md).
 
 Line links point at `main` when this was written. If they drift, search for the function name.
 

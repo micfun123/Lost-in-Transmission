@@ -326,6 +326,8 @@ A deploy restarts the server, which **ends every game in progress**.
 
 ## Changing things
 
+For step-by-step recipes (new levels, map rules, new actions and more), see [Extending the game](EXTENDING.md).
+
 | To change… | Edit |
 |---|---|
 | Time, rounds or action points | `MISSION_MS`, `ROUND_LIMIT`, `ACTION_POINTS` in `operation.js` |

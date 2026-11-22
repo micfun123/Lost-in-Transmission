@@ -12,7 +12,6 @@ const MAP_TILES = {
   "T": ["station", "STN"],
   "S": ["start", "START"],
 };
-const DROP_LABELS = ["FTN", "STN", "PARK"];
 
 function node(tag, attributes, ...children) {
   const element = document.createElement(tag);
@@ -146,7 +145,7 @@ function map(state) {
     ...[...row].map((tile, x) => {
       const [terrain, label] = MAP_TILES[tile];
       const classes = ["tile", terrain];
-      let mark = tile === "E" ? DROP_LABELS[state.mission - 1] : label;
+      let mark = tile === "E" ? state.drop_label : label;
       if (tile === "S" && state.role === "agent") mark = "";
       if (state.patrol?.some((location) => isAt(location, x, y))) classes.push("patrol");
       if (isAt(state.last_seen?.position, x, y)) {
@@ -169,7 +168,7 @@ function map(state) {
 function mapLegend(state) {
   const labels = [
     ["last-seen", "Last seen"], ["patrol", "Guard route"],
-    ["package", state.mission === 1 ? "Briefcase" : "Package"], ["drop", "Drop point"],
+    ["package", `${state.package[0].toUpperCase()}${state.package.slice(1)}`], ["drop", "Drop point"],
   ];
   const sighting = state.last_seen;
   return node("aside", { class: "map-legend" },

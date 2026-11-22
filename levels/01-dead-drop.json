@@ -1,0 +1,24 @@
+{
+  "name": "Dead Drop",
+  "briefing": "A briefcase is waiting under a table at the red café. Bring it to the fountain. Routine.",
+  "package": "briefcase",
+  "destination": "fountain",
+  "decoy": "umbrella",
+  "risk": "Light",
+  "dropLabel": "FTN",
+  "grid": [
+    "...#..D.",
+    ".#.#.#..",
+    ".#......",
+    ".S..E.##",
+    "..#.....",
+    ".#X#..P.",
+    "........",
+    "#..T..#."
+  ],
+  "patrol": [[5, 2], [5, 3], [5, 4], [5, 5], [5, 6]],
+  "solution": {
+    "route": ["right", "right", "right", "right", "up", "right", "up", "up", "take", "down", "down", "left", "down", "left", "drop"],
+    "peakSuspicion": 0
+  }
+}

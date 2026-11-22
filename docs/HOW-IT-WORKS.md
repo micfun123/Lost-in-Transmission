@@ -37,7 +37,8 @@ flowchart LR
 | File | What it does |
 |---|---|
 | `server.js` | Web server. Serves the page and files, runs the `/ws` WebSocket, and manages rooms. |
-| `operation.js` | The game rules: missions, turns, moves, suspicion, ECHO, scoring, and what each player can see. |
+| `operation.js` | The game rules: turns, moves, suspicion, ECHO, scoring, and what each player can see. Also loads and checks the levels. |
+| `levels/*.json` | One file per case: briefing, items, map, guard route, and a solution the tests play. |
 | `web/index.html` | The page. Also holds the "close room" dialog and the how-to-play tutorial. |
 | `web/game.js` | Browser logic: connects to the server, handles clicks and keys, the clock, copy, and the tutorial. |
 | `web/screens.js` | Builds each screen (lobby, briefing, play screens, debrief) from the latest snapshot. |
@@ -60,7 +61,7 @@ flowchart LR
 | 2 | The Courier | envelope → station | paper | Moderate |
 | 3 | Dead Air | recording → park | paper | Heavy |
 
-Each case is an 8×8 street map, written as text in `MISSIONS` in `operation.js`:
+Each case is one JSON file in `levels/`, played in filename order. Its 8×8 street map is written as 8 lines of text:
 
 | Letter | Meaning |
 |---|---|
@@ -240,8 +241,8 @@ All messages are JSON over the WebSocket at `/ws`. Each has a `type`.
 
 The main fields in a `state` message:
 
-- **Everyone:** `role`, `code`, `phase`, `stage`, `paired` (both players connected), `mission`, `name`, `round`, `round_limit`, `seconds` (time left), `suspicion`, `grid`, `incoming` (latest message received, with static and any decrypted tile), `key` (whether the decrypt key is unused), `ready`
-- **Magpie only:** `briefing`, `objective`, `patrol`, `last_seen`
+- **Everyone:** `role`, `code`, `phase`, `stage`, `paired` (both players connected), `mission`, `name`, `drop_label`, `round`, `round_limit`, `seconds` (time left), `suspicion`, `grid`, `incoming` (latest message received, with static and any decrypted tile), `key` (whether the decrypt key is unused), `ready`
+- **Magpie only:** `briefing`, `objective`, `package`, `patrol`, `last_seen`
 - **Wren only:** `position`, `bag`, `points`, `point_limit`, `guard` (only when nearby). Wren's `grid` has `?` everywhere outside the 3×3 view.
 - **After a case ends:** `result`, `signal`, `peak_suspicion`, `transmissions` (everything sent, and what was heard), `activity` (a log per round)
 
@@ -289,13 +290,14 @@ There's no framework and no build step. The browser loads `web/game.js` and the 
 
 ## Tests
 
-Run `npm test`. It uses Node's built-in test runner. The five tests are:
+Run `npm test`. It uses Node's built-in test runner. The six tests are:
 
 | Test | Checks |
 |---|---|
 | `serves the game and link preview…` | The page, link-preview tags and files are served correctly |
 | `players can create, play, reconnect to, and close a room over /ws` | A real two-player session over WebSockets, including reconnecting |
-| `plays all three cases, keeps ECHO's memory…` | A full campaign, ECHO's memory between cases, and the wipe on replay |
+| `plays every level from its solution…` | Plays each level file's solution as a full campaign. Also checks each level's peak suspicion, ECHO's memory between cases, and the wipe on replay. |
+| `rejects levels that would crash…` | The level check catches missing markers, unknown letters, bad patrols, non-radio item names, and unreachable squares |
 | `redacts repeated words by frequency…` | ECHO's jamming, the one-use decrypt key, and memory surviving a retry |
 | `pauses the mission clock…` | The clock stops and resumes correctly when a player drops out |
 
@@ -333,7 +335,8 @@ For step-by-step recipes (new levels, map rules, new actions and more), see [Ext
 | Time, rounds or action points | `MISSION_MS`, `ROUND_LIMIT`, `ACTION_POINTS` in `operation.js` |
 | Suspicion amounts | `raiseSuspicion(…)` calls and the `use` action in `operation.js` |
 | How hard ECHO jams | `transmit()` in `operation.js` (the `>= 2` rule and `missionIndex + 1`) |
-| Maps, routes, items, briefings | `MISSIONS` in `operation.js` |
+| Maps, routes, items, briefings | That level's file in `levels/` |
+| Add, remove or reorder levels | Add, delete or rename files in `levels/` |
 | Words players can send | `WORD_GROUPS` in `web/radio.js`. The server only accepts words in this list. |
 | A screen's layout or text | `web/screens.js` and `web/style.css` |
 | The tutorial | The `#tutorial` dialog in `web/index.html`, and the `.tut-*` styles in `web/style.css` |

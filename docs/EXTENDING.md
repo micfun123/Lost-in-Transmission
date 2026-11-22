@@ -20,60 +20,83 @@ After any change, run `npm test`, then play it in two tabs with `npm start` (htt
 
 ## Add a new level
 
-Levels ("cases") are entries in the `MISSIONS` list in `operation.js`. The game plays them in list order. Moving on to the next case, the "Next case · …" label, and the end of the campaign all follow the length of the list automatically. A new level touches **three places**: the mission data, the drop-point label, and the campaign test.
+Each level is one JSON file in `levels/`. The game plays them in **filename order**, so start each name with a number: `01-dead-drop.json`, `02-the-courier.json`, and so on. Moving on to the next case, the "Next case · …" label, the end of the campaign and the tests all follow the files automatically. **Adding a level means adding a file.** No code changes.
 
-### 1. Add the mission to `MISSIONS` (`operation.js`)
+### 1. Create the file
 
-Add an entry at the end of the list. This example is a working 4th case: the map is playable, and the item and place are already radio words.
+Copy an existing level and edit it. This is a working 4th level, `levels/04-night-train.json`:
 
-```js
-  {
-    name: "Night Train",
-    briefing: "A key was left at the red café. Get it to the bank before the night shift changes.",
-    package: "key", destination: "bank", decoy: "paper", risk: "Severe",
-    grid: ["S...#...", ".##.#.T.", "...X....", "#.#.###.", "..#...D.", ".##.#.#.", "......#.", ".#.#...E"],
-    patrol: [[5, 2], [6, 2], [7, 2], [7, 3], [7, 4]],
-  },
+```json
+{
+  "name": "Night Train",
+  "briefing": "A key was left at the red café. Get it to the bank before the night shift changes.",
+  "package": "key",
+  "destination": "bank",
+  "decoy": "paper",
+  "risk": "Severe",
+  "dropLabel": "BANK",
+  "grid": [
+    "S...#...",
+    ".##.#.T.",
+    "...X....",
+    "#.#.###.",
+    "..#...D.",
+    ".##.#.#.",
+    "......#.",
+    ".#.#...E"
+  ],
+  "patrol": [[5, 2], [6, 2], [7, 2], [7, 3], [7, 4]],
+  "solution": {
+    "route": ["down", "down", "right", "right", "right", "down", "down", "right", "right", "right", "take", "right", "down", "down", "down", "drop"],
+    "peakSuspicion": 25
+  }
+}
 ```
 
 | Field | Rules |
 |---|---|
 | `name` | Shown on the briefing and debrief, and as "Next case · …" on the debrief before it. |
 | `briefing` | Magpie's briefing text. (Wren always gets a fixed generic briefing.) |
-| `package`, `destination`, `decoy` | Lower-case nouns. They appear in the objective ("Key → bank"), the bag display and the result text. **Make them words in `web/radio.js`** (here: `KEY`, `BANK`, `PAPER`), so players can say them over the radio. |
-| `risk` | Free text shown as "Interference" on the briefing. It's a label only: ECHO's strength comes from the level's position in the list (see [below](#echo-gets-stronger-every-level)). |
-| `grid` | **Exactly 8 strings of exactly 8 characters.** See [map rules](#map-rules). |
+| `package`, `destination`, `decoy` | Lower-case nouns. They appear in the objective ("Key → bank"), the bag display, the map legend and the result text. **They must be words in `web/radio.js`** (here: `KEY`, `BANK`, `PAPER`), so players can say them over the radio. |
+| `risk` | Free text shown as "Interference" on the briefing. It's a label only: ECHO's strength comes from the level's position (see [below](#echo-gets-stronger-every-level)). |
+| `dropLabel` | The short label on the drop square on the map, at most about 4 letters (`FTN`, `STN`, `PARK`). |
+| `grid` | **Exactly 8 rows of exactly 8 characters**, written top to bottom so the file looks like the map. See [map letters](#map-letters). |
 | `patrol` | The guard's route as `[x, y]` squares. See [patrol rules](#patrol-rules). |
+| `solution.route` | One way to beat the level: the moves (`up`, `down`, `left`, `right`) and actions (`take`, `drop`, `use`, `wait`) from `S` to the package, `take`, then on to `E` and `drop`. The test plays it; players never see it. |
+| `solution.peakSuspicion` | The suspicion that route ends with. The test checks this, so a change to the map or guard that makes the level harder gets noticed. |
 
-### 2. Name the drop point (`web/screens.js`)
+JSON can't contain comments. If you want notes about a level, add a `"notes"` field: the game ignores fields it doesn't use.
 
-The drop point (`E`) shows a short label on Magpie's map, picked by level number from `DROP_LABELS`. Add one for the new level, at most about 4 letters, or its drop square shows no label:
+### 2. Run `npm test`
 
-```js
-const DROP_LABELS = ["FTN", "STN", "PARK", "BANK"];
+For every level file, the tests:
+
+1. **Check the file** against the [level rules](#level-rules), with an error that names the file and the problem.
+2. **Play its solution** through the real game rules, using the fake clock. The solution must deliver the package within 8 rounds and end with exactly `peakSuspicion`. If you don't know the suspicion value, put `0`, run the test, and copy the "actual" value from the failure.
+
+The server runs the same check when it starts. **A bad level stops the server** instead of crashing a game halfway through:
+
+```
+Error: levels/04-night-train.json: "patrol" square 2 must be next to square 1
 ```
 
-### 3. Update the campaign test (`test/operation.test.js`)
+Because GitHub runs the tests before deploying, a broken level can't reach the live site.
 
-The test `plays all three cases…` walks Wren through every level and expects the **3rd** to finish the campaign. With a 4th level it fails until you:
+Then play it through once in two tabs (`npm start`). The checks prove the level *can* be finished, not that it's fun.
 
-1. Add a route for the new level to `routes`. A route is the list of moves and actions from `S` to the package, `take`, then on to `E` and `drop`. For the example above:
-   ```js
-   ["down", "down", "right", "right", "right", "down", "down", "right", "right", "right", "take",
-     "right", "down", "down", "down", "drop"],
-   ```
-   The test's loop already handles ending rounds and sending radio messages between moves.
-2. Change `index === 2 ? "complete"` to `index === routes.length - 1 ? "complete"`.
-3. Replace `assert.equal(result.peak_suspicion, index * 25);` with an explicit list, one value per level: how much suspicion that route ends up with. With the example level it's
-   ```js
-   assert.equal(result.peak_suspicion, [0, 25, 50, 25][index]);
-   ```
-   (the example route is spotted once, by the guard near the bank). If you don't know your route's value, run the test once and read the "expected/actual" in the failure.
-4. The ECHO line `[index ? REDACTED : "GO"]` only assumes `GO` is already learned from case 2 onwards, so it still holds.
+### Level rules
 
-These exact steps were checked: with the example level added, the campaign test passes.
+These are all checked automatically:
 
-### Map rules
+- `name`, `briefing`, `package`, `destination`, `decoy`, `risk` and `dropLabel` are present and not empty.
+- `package`, `destination` and `decoy` are radio words.
+- The grid is 8×8 and only uses known [map letters](#map-letters).
+- The grid has exactly one each of `S`, `D`, `X` and `E`.
+- The patrol has at least 2 squares. Each one is on the map, not a wall, and next to the one before it.
+- Wren can walk from `S` to `D` and from `S` to `E`.
+- (In the tests) The solution finishes the level with the stated peak suspicion.
+
+### Map letters
 
 | Letter | Meaning | How many |
 |---|---|---|
@@ -82,23 +105,17 @@ These exact steps were checked: with the example level added, the campaign test 
 | `S` | Wren's start | **Exactly one** |
 | `D` | Package (labelled CAFÉ) | **Exactly one** |
 | `X` | Decoy (also labelled CAFÉ) | **Exactly one** |
-| `E` | Drop point | **Exactly one** |
+| `E` | Drop point (labelled with `dropLabel`) | **Exactly one** |
 | `P`, `T` | Park / station landmark. Wren can walk on them; they're labels to talk about. | Optional |
 
-Things that break the game:
-- **A missing `S`, `D`, `X` or `E` crashes the room when the case starts.** The decoy is required.
-- **Any other letter crashes the browser** when it draws the map. To add one, see [Add a new map tile](#add-a-new-map-tile).
-- **The map must be 8×8.** The page always draws 8 columns and 8 rows, and the coordinates only run A–H and 1–8.
-- **Nothing checks that the map can be finished.** Make sure Wren can walk from `S` to `D` and from `D` to `E`. The route needs to fit within 8 rounds × 4 action points = 32 points, *including* `take` and `drop`, and leave slack for wrong turns and the decoy.
+Positions are `[x, y]`, with `[0, 0]` the top-left square (A1), `x` going right and `y` going down. So the tile at `[x, y]` is in row `y`, at character `x`. To add a new letter, see [Add a new map tile](#add-a-new-map-tile).
 
-Remember the grid is written row by row, top to bottom: `grid[y][x]`, with `[0, 0]` the top-left square (A1).
+The decoy and package both show **CAFÉ** on every map, so players can't tell them apart from the label. That's deliberate.
 
 ### Patrol rules
 
-- **At least 2 squares.** A one-square route crashes the game on Wren's first move.
-- Each square should be a street (`.`) and **next to the previous one** (up, down, left or right). The guard is placed exactly on these squares in order, so a gap makes it appear to teleport.
 - The guard walks the list forward then back (A→B→C→B→A…), one square each time Wren spends a point. A route of *n* squares repeats every `2(n − 1)` points.
-- Wren is spotted when the guard is on or next to their square. So a route that runs along a corridor Wren must pass through makes the level harder.
+- Wren is spotted when the guard is on or next to their square. So a route along a corridor Wren must pass through makes the level harder.
 
 ### ECHO gets stronger every level
 
@@ -108,23 +125,13 @@ ECHO jams up to *(level number)* learned words per message, set by `missionIndex
 const blocked = new Set(learned.slice(0, Math.min(3, this.missionIndex + 1)));
 ```
 
-### Other things that change with level number
+### Reorder or remove levels
 
-- `mapLegend` in `web/screens.js` calls the package "Briefcase" on level 1 and "Package" on every other level.
-- The decoy and package both show **CAFÉ** on every map (`MAP_TILES` in `web/screens.js`), so players can't tell them apart from the label. That's deliberate.
-
-### Checklist
-
-- [ ] Mission added to the end of `MISSIONS`, with an 8×8 grid containing one `S`, `D`, `X` and `E`
-- [ ] Patrol has 2+ street squares, each next to the last
-- [ ] Item and place nouns exist in `web/radio.js`
-- [ ] `DROP_LABELS` has a label for the new level
-- [ ] The campaign test has a route for it and uses `routes.length - 1`
-- [ ] `npm test` passes, and you've played it through once in two tabs
+Rename the files to change the order, or delete a file to remove the level. Nothing else refers to levels by number. (Rooms in progress are lost on the restart anyway.)
 
 ## Edit an existing map
 
-Change the strings in that mission's `grid` (and its `patrol` if needed), following the [map rules](#map-rules). If you move `S`, `D` or `E`, or put a wall on the existing path, **update that level's route** in the campaign test. The routes in `test/operation.test.js` follow the current maps step by step.
+Edit `grid` or `patrol` in that level's file. If the change breaks the saved solution (a wall on the path, or the guard now spotting Wren more or less often), `npm test` fails for that level. Update `solution.route` or `solution.peakSuspicion` to match.
 
 ## Add or change radio words
 
@@ -158,10 +165,11 @@ Several tests check exact numbers (for example peak suspicion, or which word get
 
 For example, a `B` for "bank" landmark:
 
-1. **`web/screens.js`:** add it to `MAP_TILES` as `"B": ["bank", "BANK"]`: the CSS class, then the label drawn on the square. Without this, the browser crashes on any map containing `B`.
-2. **`web/style.css`:** give it a colour next to the other tiles: `.tile.bank { background: #6a5a8c; }`
-3. **Optional:** add it to the legend in `mapLegend`.
-4. **Wall or not?** Wren's movement in `Room.move` only blocks `#`, so any new letter can be walked on. For a new kind of obstacle, change that check.
+1. **`operation.js`:** add the letter to `TILES`, or the level check rejects any level that uses it.
+2. **`web/screens.js`:** add it to `MAP_TILES` as `"B": ["bank", "BANK"]`: the CSS class, then the label drawn on the square. The two lists must match, because the browser can't draw a letter that's missing here.
+3. **`web/style.css`:** give it a colour next to the other tiles: `.tile.bank { background: #6a5a8c; }`
+4. **Optional:** add it to the legend in `mapLegend`.
+5. **Wall or not?** Wren's movement in `Room.move` only blocks `#`, so any new letter can be walked on. For a new kind of obstacle, change that check.
 
 ## Add a new action for Wren
 

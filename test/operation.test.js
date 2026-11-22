@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { Room } from "../operation.js";
+import { MISSIONS, Room, checkLevel } from "../operation.js";
 import { REDACTED } from "../web/radio.js";
 
 function command(room, role, type, extra = {}) {
@@ -18,16 +18,9 @@ function pairedRoom(now = () => 0) {
   return room;
 }
 
-test("plays all three cases, keeps ECHO's memory between cases, and clears it on replay", () => {
+test("plays every level from its solution, keeps ECHO's memory between cases, and clears it on replay", () => {
   const room = pairedRoom();
-  const routes = [
-    ["right", "right", "right", "right", "up", "right", "up", "up", "take",
-      "down", "down", "left", "down", "left", "drop"],
-    ["left", "left", "up", "up", "right", "right", "take", "right", "right", "right",
-      "right", "down", "down", "down", "down", "down", "down", "left", "down", "drop"],
-    ["right", "right", "up", "right", "right", "right", "right", "right", "up", "up",
-      "up", "up", "up", "up", "take", "down", "down", "down", "down", "down", "down", "down", "drop"],
-  ];
+  const routes = MISSIONS.map((mission) => mission.solution.route);
   for (const [index, route] of routes.entries()) {
     assert.equal(room.snapshot("handler").mission, index + 1);
     ready(room);
@@ -45,8 +38,8 @@ test("plays all three cases, keeps ECHO's memory between cases, and clears it on
     }
 
     const result = room.snapshot("agent");
-    assert.equal(result.phase, index === 2 ? "complete" : "cleared");
-    assert.equal(result.peak_suspicion, index * 25);
+    assert.equal(result.phase, index === routes.length - 1 ? "complete" : "cleared");
+    assert.equal(result.peak_suspicion, MISSIONS[index].solution.peakSuspicion);
     assert.match(result.result, /reached the/);
     assert.ok(result.transmissions.length > 2);
     ready(room);
@@ -108,4 +101,28 @@ test("pauses the mission clock on loss of either player and resumes the remainin
   assert.equal(room.expireMission(), true);
   assert.equal(room.snapshot("agent").seconds, 0);
   assert.match(room.snapshot("handler").result, /Time ran out/);
+});
+
+test("rejects levels that would crash or can't be finished", () => {
+  const level = structuredClone(MISSIONS[0]);
+  assert.doesNotThrow(() => checkLevel(level));
+  const broken = [
+    [(copy) => { copy.grid[5] = copy.grid[5].replace("X", "."); }, /exactly one "X"/],
+    [(copy) => { copy.grid[0] = "Q" + copy.grid[0].slice(1); }, /unknown letter "Q"/],
+    [(copy) => { copy.grid.pop(); }, /8 rows of 8/],
+    [(copy) => { copy.patrol = [[5, 2]]; }, /at least 2 squares/],
+    [(copy) => { copy.patrol = [[5, 2], [5, 4]]; }, /square 2 must be next to square 1/],
+    [(copy) => { copy.patrol = [[3, 0], [3, 1]]; }, /square 1 must be an \[x, y\] on the map, not a wall/],
+    [(copy) => { copy.decoy = "teapot"; }, /"decoy" must be a radio word/],
+    [(copy) => {
+      // Wall in the drop point at (4, 3) on all four sides.
+      copy.patrol = [[0, 6], [1, 6]];
+      for (const [x, y] of [[4, 2], [3, 3], [5, 3], [4, 4]]) copy.grid[y] = `${copy.grid[y].slice(0, x)}#${copy.grid[y].slice(x + 1)}`;
+    }, /walk from "S" to "[DE]"/],
+  ];
+  for (const [breakIt, message] of broken) {
+    const copy = structuredClone(level);
+    breakIt(copy);
+    assert.throws(() => checkLevel(copy), message);
+  }
 });

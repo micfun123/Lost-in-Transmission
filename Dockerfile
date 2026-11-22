@@ -7,6 +7,7 @@ COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
 
 COPY server.js operation.js ./
+COPY levels ./levels
 COPY web ./web
 
 USER node

@@ -1,0 +1,24 @@
+{
+  "name": "The Courier",
+  "briefing": "The courier missed their connection. Collect the envelope at the red café and leave it at the station.",
+  "package": "envelope",
+  "destination": "station",
+  "decoy": "paper",
+  "risk": "Moderate",
+  "dropLabel": "STN",
+  "grid": [
+    "..D.....",
+    ".###.#..",
+    "..S#.#P.",
+    ".#...#..",
+    "....##..",
+    ".#X.....",
+    "...#....",
+    ".#...E#."
+  ],
+  "patrol": [[4, 5], [5, 5], [6, 5], [7, 5]],
+  "solution": {
+    "route": ["left", "left", "up", "up", "right", "right", "take", "right", "right", "right", "right", "down", "down", "down", "down", "down", "down", "left", "down", "drop"],
+    "peakSuspicion": 25
+  }
+}

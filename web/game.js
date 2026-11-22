@@ -224,6 +224,12 @@ class Game {
   }
 
   command(action, value) {
+    if (action === "lock") {
+      fetch("/api/clearance/reset", { method: "POST" })
+        .then(() => location.reload())
+        .catch(() => {});
+      return;
+    }
     if (action === "tutorial") {
       openTutorial();
       return;

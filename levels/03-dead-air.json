@@ -6,6 +6,8 @@
   "decoy": "paper",
   "risk": "Heavy",
   "dropLabel": "PARK",
+  "echoChance": 0.3,
+  "echoMaxStatic": 2,
   "grid": [
     "....#..D",
     ".##.#.#.",

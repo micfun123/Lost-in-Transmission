@@ -6,6 +6,8 @@
   "decoy": "umbrella",
   "risk": "Light",
   "dropLabel": "FTN",
+  "echoChance": 0.2,
+  "echoMaxStatic": 1,
   "grid": [
     "...#..D.",
     ".#.#.#..",

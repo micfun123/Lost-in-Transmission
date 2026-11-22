@@ -266,9 +266,9 @@ button.key:not(:disabled) {
 
 .map {
   display: grid;
-  grid-template-rows: repeat(8, minmax(0, 1fr));
+  grid-template-rows: repeat(var(--rows, 8), minmax(0, 1fr));
   gap: 2px;
-  aspect-ratio: 1;
+  aspect-ratio: var(--cols, 8) / var(--rows, 8);
   padding: 2px;
   border-radius: 5px;
   background: #06080a;
@@ -277,7 +277,7 @@ button.key:not(:disabled) {
 
 .map [role="row"] {
   display: grid;
-  grid-template-columns: repeat(8, minmax(0, 1fr));
+  grid-template-columns: repeat(var(--cols, 8), minmax(0, 1fr));
   gap: 2px;
 }
 

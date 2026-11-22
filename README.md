@@ -4,6 +4,8 @@
 
 Two-player co-op spy game set in Kessel, 1974. Magpie guides Wren through three cases over a word-tile radio. ECHO learns recurring words and interferes with later transmissions.
 
+For a full guide to the rules, code, protocol and deployment, see [How it works](docs/HOW-IT-WORKS.md).
+
 ## Run a local session
 
 Use Node.js 24 or newer. From the repository root:

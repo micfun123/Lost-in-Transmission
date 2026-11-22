@@ -1,0 +1,24 @@
+{
+  "name": "Dead Air",
+  "briefing": "A technician left a recording of ECHO at the red café. Take it to the park before the signal disappears.",
+  "package": "recording",
+  "destination": "park",
+  "decoy": "paper",
+  "risk": "Heavy",
+  "dropLabel": "PARK",
+  "grid": [
+    "....#..D",
+    ".##.#.#.",
+    "...#....",
+    ".#...#..",
+    ".#.#...T",
+    "....##..",
+    "..X.....",
+    "S..#...E"
+  ],
+  "patrol": [[4, 2], [5, 2], [6, 2], [7, 2], [7, 3]],
+  "solution": {
+    "route": ["right", "right", "up", "right", "right", "right", "right", "right", "up", "up", "up", "up", "up", "up", "take", "down", "down", "down", "down", "down", "down", "down", "drop"],
+    "peakSuspicion": 50
+  }
+}

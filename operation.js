@@ -1,4 +1,6 @@
+// Game rules for one room: missions, turns, ECHO, and what each role is allowed to see.
 import { randomBytes } from "node:crypto";
+import { readdirSync, readFileSync } from "node:fs";
 import { CALLSIGNS, MESSAGE_LIMIT, REDACTED, WORD_GROUPS } from "./web/radio.js";
 
 const ROLES = Object.keys(CALLSIGNS);
@@ -9,29 +11,67 @@ const MISSION_MS = 600_000;
 const ROUND_LIMIT = 8;
 const ACTION_POINTS = 4;
 
-const MISSIONS = [
-  {
-    name: "Dead Drop",
-    briefing: "A briefcase is waiting under a table at the red café. Bring it to the fountain. Routine.",
-    package: "briefcase", destination: "fountain", decoy: "umbrella", risk: "Light",
-    grid: ["...#..D.", ".#.#.#..", ".#......", ".S..E.##", "..#.....", ".#X#..P.", "........", "#..T..#."],
-    patrol: [[5, 2], [5, 3], [5, 4], [5, 5], [5, 6]],
-  },
-  {
-    name: "The Courier",
-    briefing: "The courier missed their connection. Collect the envelope at the red café and leave it at the station.",
-    package: "envelope", destination: "station", decoy: "paper", risk: "Moderate",
-    grid: ["..D.....", ".###.#..", "..S#.#P.", ".#...#..", "....##..", ".#X.....", "...#....", ".#...E#."],
-    patrol: [[4, 5], [5, 5], [6, 5], [7, 5]],
-  },
-  {
-    name: "Dead Air",
-    briefing: "A technician left a recording of ECHO at the red café. Take it to the park before the signal disappears.",
-    package: "recording", destination: "park", decoy: "paper", risk: "Heavy",
-    grid: ["....#..D", ".##.#.#.", "...#....", ".#...#..", ".#.#...T", "....##..", "..X.....", "S..#...E"],
-    patrol: [[4, 2], [5, 2], [6, 2], [7, 2], [7, 3]],
-  },
-];
+const LEVELS = new URL("./levels/", import.meta.url);
+// Map letters the browser knows how to draw (MAP_TILES in web/screens.js).
+const TILES = new Set([".", "#", "S", "D", "X", "E", "P", "T"]);
+const TEXT_FIELDS = ["name", "briefing", "package", "destination", "decoy", "risk", "dropLabel"];
+
+// Throws a readable error for anything that would crash or soft-lock a game, so a bad level
+// stops the server at startup (and fails CI) instead of breaking a room mid-case.
+export function checkLevel(level) {
+  for (const field of TEXT_FIELDS) {
+    if (typeof level[field] !== "string" || !level[field]) throw new Error(`"${field}" must be some text`);
+  }
+  for (const field of ["package", "destination", "decoy"]) {
+    if (!WORDS.has(level[field].toUpperCase())) throw new Error(`"${field}" must be a radio word in web/radio.js`);
+  }
+  const { grid, patrol } = level;
+  if (!Array.isArray(grid) || grid.length !== 8 || grid.some((row) => typeof row !== "string" || row.length !== 8)) {
+    throw new Error('"grid" must be 8 rows of 8 characters');
+  }
+  const letters = grid.join("");
+  const unknown = [...letters].find((tile) => !TILES.has(tile));
+  if (unknown) throw new Error(`"grid" has an unknown letter "${unknown}"`);
+  for (const marker of ["S", "D", "X", "E"]) {
+    if (letters.split(marker).length !== 2) throw new Error(`"grid" needs exactly one "${marker}"`);
+  }
+  const street = ([x, y]) => grid[y]?.[x] !== undefined && grid[y][x] !== "#";
+  if (!Array.isArray(patrol) || patrol.length < 2) throw new Error('"patrol" needs at least 2 squares');
+  patrol.forEach((square, index) => {
+    if (!Array.isArray(square) || square.length !== 2 || !street(square)) {
+      throw new Error(`"patrol" square ${index + 1} must be an [x, y] on the map, not a wall`);
+    }
+    const previous = patrol[index - 1];
+    if (previous && Math.abs(square[0] - previous[0]) + Math.abs(square[1] - previous[1]) !== 1) {
+      throw new Error(`"patrol" square ${index + 1} must be next to square ${index}`);
+    }
+  });
+  const reached = new Set([site(level, "S").join()]);
+  const queue = [site(level, "S")];
+  for (const [x, y] of queue) {
+    for (const [dx, dy] of Object.values(DIRECTIONS)) {
+      const next = [x + dx, y + dy];
+      if (street(next) && !reached.has(next.join())) {
+        reached.add(next.join());
+        queue.push(next);
+      }
+    }
+  }
+  for (const marker of ["D", "E"]) {
+    if (!reached.has(site(level, marker).join())) throw new Error(`Wren can't walk from "S" to "${marker}"`);
+  }
+}
+
+export const MISSIONS = readdirSync(LEVELS).filter((file) => file.endsWith(".json")).sort().map((file) => {
+  try {
+    const level = JSON.parse(readFileSync(new URL(file, LEVELS), "utf8"));
+    checkLevel(level);
+    return level;
+  } catch (error) {
+    throw new Error(`levels/${file}: ${error.message}`);
+  }
+});
+if (!MISSIONS.length) throw new Error("levels/ has no level files");
 
 function site(mission, marker) {
   const row = mission.grid.findIndex((line) => line.includes(marker));
@@ -313,6 +353,7 @@ export class Room {
       type: "state", role, code: this.code, phase: this.phase, stage: this.stage,
       paired: this.paired, mission: this.missionIndex + 1, name: mission.name,
       next_case: MISSIONS[this.missionIndex + 1]?.name ?? null,
+      drop_label: mission.dropLabel,
       interference: mission.risk, suspicion: this.suspicion, grid,
       round: this.round, round_limit: ROUND_LIMIT, key: this.keys.has(role),
       incoming: this.incoming(role), ready: [...this.ready].sort(),
@@ -322,7 +363,7 @@ export class Room {
       Object.assign(state, {
         briefing: mission.briefing,
         objective: `${mission.package[0].toUpperCase()}${mission.package.slice(1)} → ${mission.destination}`,
-        patrol: mission.patrol, last_seen: this.lastSeen,
+        package: mission.package, patrol: mission.patrol, last_seen: this.lastSeen,
       });
     } else {
       Object.assign(state, {

@@ -1,3 +1,4 @@
+// Browser client: talks to the server over /ws, handles input, and redraws on every change.
 import { MESSAGE_LIMIT, REDACTED } from "./radio.js";
 import { renderScreen } from "./screens.js";
 

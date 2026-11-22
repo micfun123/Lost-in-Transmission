@@ -3,5 +3,7 @@
 !package-lock.json
 !server.js
 !operation.js
+!levels/
+!levels/**
 !web/
 !web/**

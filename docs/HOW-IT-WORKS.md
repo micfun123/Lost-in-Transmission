@@ -2,7 +2,7 @@
 
 This guide explains the whole project: the game rules, how the code is split, what the browser and server say to each other, and how a push to `main` ends up live at https://transmission.michaelrbparker.com.
 
-For setup commands, see the [README](../README.md).
+For setup commands, see the [README](../README.md). For a function-by-function guide to the code, see the [code reference](CODE.md).
 
 ## Contents
 

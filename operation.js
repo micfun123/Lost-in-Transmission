@@ -1,3 +1,4 @@
+// Game rules for one room: missions, turns, ECHO, and what each role is allowed to see.
 import { randomBytes } from "node:crypto";
 import { CALLSIGNS, MESSAGE_LIMIT, REDACTED, WORD_GROUPS } from "./web/radio.js";
 

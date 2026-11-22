@@ -1,3 +1,4 @@
+// HTTP and WebSocket server: serves web/ and passes player commands to the rooms in operation.js.
 import { randomInt } from "node:crypto";
 import { readFile, readFileSync } from "node:fs";
 import { createServer } from "node:http";

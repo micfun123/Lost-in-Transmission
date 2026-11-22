@@ -1,3 +1,4 @@
+// Radio words shared by the browser and the server. The server rejects any word not listed here.
 export const WORD_GROUPS = {
   ACTION: ["GO", "TAKE", "DROP", "WAIT", "USE", "RETURN"],
   DIRECTION: ["NORTH", "EAST", "SOUTH", "WEST", "LEFT", "RIGHT"],

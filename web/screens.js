@@ -1,3 +1,4 @@
+// Builds each screen from the latest server snapshot. No game state lives here.
 import { CALLSIGNS, MESSAGE_LIMIT, REDACTED, WORD_GROUPS } from "./radio.js";
 
 const MAP_TILES = {

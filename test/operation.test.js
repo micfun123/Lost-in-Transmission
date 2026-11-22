@@ -11,8 +11,9 @@ function ready(room) {
   for (const role of ["handler", "agent"]) command(room, role, "ready");
 }
 
-function pairedRoom(now = () => 0) {
-  const room = new Room("ROOM1", now);
+// random = () => 0 makes ECHO jam every learned word it's allowed to, so results are predictable.
+function pairedRoom(now = () => 0, random = () => 0) {
+  const room = new Room("ROOM1", now, random);
   room.connect("handler", {});
   room.connect("agent", {});
   return room;
@@ -50,7 +51,7 @@ test("plays every level from its solution, keeps ECHO's memory between cases, an
   assert.deepEqual(room.incoming("agent").tiles, ["GO"]);
 });
 
-test("redacts repeated words by frequency, allows one decrypt, and keeps memory on retry", () => {
+test("jams learned words up to the level's cap, allows one decrypt, and keeps memory on retry", () => {
   const room = pairedRoom();
   ready(room);
   const tiles = ["TAKE", "GO", "GO"];
@@ -60,10 +61,11 @@ test("redacts repeated words by frequency, allows one decrypt, and keeps memory 
   command(room, "agent", "radio", { tiles });
   assert.deepEqual(room.incoming("handler").tiles, tiles);
   command(room, "handler", "radio", { tiles });
-  assert.deepEqual(room.incoming("agent").tiles, ["TAKE", REDACTED, REDACTED]);
+  // Both words are learned, but Dead Drop allows one static tile per message.
+  assert.deepEqual(room.incoming("agent").tiles, [REDACTED, "GO", "GO"]);
 
   command(room, "agent", "decrypt");
-  assert.deepEqual(room.incoming("agent").tiles, ["TAKE", "GO", REDACTED]);
+  assert.deepEqual(room.incoming("agent").tiles, tiles);
   assert.equal(room.snapshot("agent").key, false);
   assert.equal(room.command("agent", { type: "decrypt" })[0], false);
 
@@ -75,7 +77,7 @@ test("redacts repeated words by frequency, allows one decrypt, and keeps memory 
   const result = room.snapshot("handler");
   assert.equal(result.phase, "failed");
   assert.match(result.result, /last round/);
-  assert.deepEqual(result.transmissions[2].heard, ["TAKE", REDACTED, REDACTED]);
+  assert.deepEqual(result.transmissions[2].heard, [REDACTED, "GO", "GO"]);
 
   ready(room);
   ready(room);
@@ -109,7 +111,12 @@ test("rejects levels that would crash or can't be finished", () => {
   const broken = [
     [(copy) => { copy.grid[5] = copy.grid[5].replace("X", "."); }, /exactly one "X"/],
     [(copy) => { copy.grid[0] = "Q" + copy.grid[0].slice(1); }, /unknown letter "Q"/],
-    [(copy) => { copy.grid.pop(); }, /8 rows of 8/],
+    [(copy) => { copy.grid[0] += "."; }, /all the same length/],
+    [(copy) => { copy.grid = copy.grid.slice(0, 4); }, /5 to 12 rows/],
+    [(copy) => { copy.rounds = 0; }, /"rounds" must be a whole number/],
+    [(copy) => { copy.minutes = "ten"; }, /"minutes" must be a number/],
+    [(copy) => { copy.echoChance = 2; }, /"echoChance" must be a number from 0 to 1/],
+    [(copy) => { copy.echoMaxStatic = 1.5; }, /"echoMaxStatic" must be a whole number/],
     [(copy) => { copy.patrol = [[5, 2]]; }, /at least 2 squares/],
     [(copy) => { copy.patrol = [[5, 2], [5, 4]]; }, /square 2 must be next to square 1/],
     [(copy) => { copy.patrol = [[3, 0], [3, 1]]; }, /square 1 must be an \[x, y\] on the map, not a wall/],
@@ -125,4 +132,54 @@ test("rejects levels that would crash or can't be finished", () => {
     breakIt(copy);
     assert.throws(() => checkLevel(copy), message);
   }
+});
+
+test("ECHO jams by chance, caps static per message, and fades between cases", () => {
+  const sendTwice = (room, tiles) => {
+    command(room, "handler", "radio", { tiles });
+    command(room, "agent", "end_moves");
+    command(room, "agent", "radio", { tiles });
+    command(room, "handler", "radio", { tiles });
+    return room.incoming("agent").tiles;
+  };
+  const words = ["GO", "NORTH", "EAST", "WEST", "SOUTH", "TAKE"];
+
+  // A roll above the 60% ceiling never jams, however often a word is used.
+  const lucky = pairedRoom(() => 0, () => 0.99);
+  ready(lucky);
+  assert.deepEqual(sendTwice(lucky, words), words);
+
+  // Dead Air allows 2 static tiles, even when all 6 words are learned.
+  const heavy = pairedRoom();
+  heavy.missionIndex = 2;
+  heavy.prepareCase();
+  ready(heavy);
+  assert.equal(sendTwice(heavy, words).filter((tile) => tile === REDACTED).length, 2);
+
+  // Clearing a case halves ECHO's memory; retrying keeps it.
+  const room = pairedRoom();
+  room.words.set("GO", 7);
+  room.phase = "failed";
+  ready(room);
+  assert.equal(room.words.get("GO"), 7);
+  room.phase = "cleared";
+  ready(room);
+  assert.equal(room.words.get("GO"), 3);
+});
+
+test("levels can override time, rounds, action points and map size", () => {
+  const level = MISSIONS[0];
+  assert.deepEqual([level.minutes, level.rounds, level.actionPoints], [10, 8, 4]);
+  const saved = { ...level };
+  try {
+    Object.assign(level, { minutes: 2, rounds: 3, actionPoints: 6 });
+    const room = pairedRoom();
+    const state = room.snapshot("agent");
+    assert.deepEqual([state.seconds, state.round_limit, state.points, state.point_limit], [120, 3, 6, 6]);
+  } finally {
+    Object.assign(level, saved);
+  }
+  const wide = structuredClone(level);
+  wide.grid = wide.grid.map((row) => `${row}....`);
+  assert.doesNotThrow(() => checkLevel(wide));
 });

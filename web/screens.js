@@ -162,7 +162,8 @@ function map(state) {
       const title = [coordinate([x, y]), ...classes.slice(1)].join(" · ");
       return node("span", { role: "cell", class: classes.join(" "), title, "aria-label": title }, mark);
     })));
-  return node("div", { class: "map", role: "table", "aria-label": "Street map" }, ...rows);
+  return node("div", { class: "map", role: "table", "aria-label": "Street map",
+    style: `--cols: ${state.grid[0].length}; --rows: ${state.grid.length}` }, ...rows);
 }
 
 function mapLegend(state) {

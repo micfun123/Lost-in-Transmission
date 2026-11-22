@@ -35,6 +35,8 @@ Copy an existing level and edit it. This is a working 4th level, `levels/04-nigh
   "decoy": "paper",
   "risk": "Severe",
   "dropLabel": "BANK",
+  "echoChance": 0.3,
+  "echoMaxStatic": 2,
   "grid": [
     "S...#...",
     ".##.#.T.",
@@ -58,11 +60,14 @@ Copy an existing level and edit it. This is a working 4th level, `levels/04-nigh
 | `name` | Shown on the briefing and debrief, and as "Next case · …" on the debrief before it. |
 | `briefing` | Magpie's briefing text. (Wren always gets a fixed generic briefing.) |
 | `package`, `destination`, `decoy` | Lower-case nouns. They appear in the objective ("Key → bank"), the bag display, the map legend and the result text. **They must be words in `web/radio.js`** (here: `KEY`, `BANK`, `PAPER`), so players can say them over the radio. |
-| `risk` | Free text shown as "Interference" on the briefing. It's a label only: ECHO's strength comes from the level's position (see [below](#echo-gets-stronger-every-level)). |
+| `risk` | Free text shown as "Interference" on the briefing. Make it match the ECHO settings below. |
 | `dropLabel` | The short label on the drop square on the map, at most about 4 letters (`FTN`, `STN`, `PARK`). |
-| `grid` | **Exactly 8 rows of exactly 8 characters**, written top to bottom so the file looks like the map. See [map letters](#map-letters). |
+| `grid` | **5 to 12 rows, all the same length of 5 to 12 characters**, written top to bottom so the file looks like the map. The built-in levels are 8×8. On a phone, more than about 10 columns makes the tiles small. See [map letters](#map-letters). |
 | `patrol` | The guard's route as `[x, y]` squares. See [patrol rules](#patrol-rules). |
 | `solution.route` | One way to beat the level: the moves (`up`, `down`, `left`, `right`) and actions (`take`, `drop`, `use`, `wait`) from `S` to the package, `take`, then on to `E` and `drop`. The test plays it; players never see it. |
+| `echoChance` *(optional)* | How fast ECHO learns to jam a word: the chance per earlier use, from 0 to 1. The built-in levels use 0.2 (Light), 0.25 (Moderate) and 0.3 (Heavy). Defaults to 0.25. See [ECHO settings](#echo-settings). |
+| `echoMaxStatic` *(optional)* | The most static tiles in one message. 0 turns ECHO off for the level. The built-in levels use 1, 2, 2. Defaults to 2. |
+| `minutes`, `rounds`, `actionPoints` *(optional)* | Time limit, rounds, and Wren's points per round. Default 10, 8 and 4. |
 | `solution.peakSuspicion` | The suspicion that route ends with. The test checks this, so a change to the map or guard that makes the level harder gets noticed. |
 
 JSON can't contain comments. If you want notes about a level, add a `"notes"` field: the game ignores fields it doesn't use.
@@ -72,7 +77,7 @@ JSON can't contain comments. If you want notes about a level, add a `"notes"` fi
 For every level file, the tests:
 
 1. **Check the file** against the [level rules](#level-rules), with an error that names the file and the problem.
-2. **Play its solution** through the real game rules, using the fake clock. The solution must deliver the package within 8 rounds and end with exactly `peakSuspicion`. If you don't know the suspicion value, put `0`, run the test, and copy the "actual" value from the failure.
+2. **Play its solution** through the real game rules, using the fake clock. The solution must deliver the package within the level's rounds and end with exactly `peakSuspicion`. If you don't know the suspicion value, put `0`, run the test, and copy the "actual" value from the failure.
 
 The server runs the same check when it starts. **A bad level stops the server** instead of crashing a game halfway through:
 
@@ -90,7 +95,8 @@ These are all checked automatically:
 
 - `name`, `briefing`, `package`, `destination`, `decoy`, `risk` and `dropLabel` are present and not empty.
 - `package`, `destination` and `decoy` are radio words.
-- The grid is 8×8 and only uses known [map letters](#map-letters).
+- The grid is 5 to 12 rows of equal length (5 to 12), and only uses known [map letters](#map-letters).
+- `minutes` is above 0, `rounds` and `actionPoints` are whole numbers of 1 or more, `echoChance` is from 0 to 1, and `echoMaxStatic` is a whole number of 0 or more.
 - The grid has exactly one each of `S`, `D`, `X` and `E`.
 - The patrol has at least 2 squares. Each one is on the map, not a wall, and next to the one before it.
 - Wren can walk from `S` to `D` and from `S` to `E`.
@@ -117,13 +123,14 @@ The decoy and package both show **CAFÉ** on every map, so players can't tell th
 - The guard walks the list forward then back (A→B→C→B→A…), one square each time Wren spends a point. A route of *n* squares repeats every `2(n − 1)` points.
 - Wren is spotted when the guard is on or next to their square. So a route along a corridor Wren must pass through makes the level harder.
 
-### ECHO gets stronger every level
+### ECHO settings
 
-ECHO jams up to *(level number)* learned words per message, set by `missionIndex + 1` in `Room.transmit`. A 4th level jams up to 4, a 5th up to 5. With messages of at most 6 tiles, levels past 3 get very hard quickly. To cap it, change that line in `transmit`:
+Each level sets how hard ECHO is with two fields:
 
-```js
-const blocked = new Set(learned.slice(0, Math.min(3, this.missionIndex + 1)));
-```
+- **`echoChance`**: once a word has been in 2 earlier messages, each new use has `echoChance × (uses − 1)` chance of being jammed, up to 60%. Higher means ECHO catches on faster.
+- **`echoMaxStatic`**: the most static tiles in one message, and never more than half the message. This stops whole messages being wiped out.
+
+Rough guide from simulated play: 0.2 / 1 jams about 6% of tiles, 0.25 / 2 about 16%, and 0.3 / 2 about 22%. These grow a little through a level, as ECHO hears more. ECHO's memory halves between levels, so a later level doesn't start fully jammed.
 
 ### Reorder or remove levels
 
@@ -144,18 +151,18 @@ Edit `WORD_GROUPS` in `web/radio.js`.
 
 ## Tune difficulty
 
-All of these are in `operation.js`:
+Most of these are in `operation.js`:
 
 | To change | Where |
 |---|---|
-| Time limit | `MISSION_MS` (milliseconds) |
-| Rounds per level | `ROUND_LIMIT` |
-| Wren's points per round | `ACTION_POINTS` |
+| Time, rounds, points, ECHO strength for one level | That level's file: `minutes`, `rounds`, `actionPoints`, `echoChance`, `echoMaxStatic` |
+| The same, for every level that doesn't set them | `LEVEL_DEFAULTS` |
+| ECHO's highest jam chance | `JAM_CHANCE_LIMIT` (0.6) |
+| How much ECHO forgets between levels | The halving in `confirm` (`Math.floor(count / 2)`) |
 | Suspicion when spotted | `this.raiseSuspicion(25)` in `spendPoint` |
 | Suspicion for taking the decoy | `this.raiseSuspicion(15)` in `act` |
 | Suspicion removed by using the decoy | `this.suspicion - 15` in `act` |
 | When ECHO learns a word | `this.words.get(term) >= 2` in `transmit` (the number of earlier messages before a word can be jammed) |
-| How many words ECHO jams | `this.missionIndex + 1` in `transmit` |
 | Decrypt keys per level | One per player: `this.keys = new Set(ROLES)` in `prepareCase`, used up in `decrypt` |
 | Message length | `MESSAGE_LIMIT` in `web/radio.js` (the composer always shows that many slots) |
 

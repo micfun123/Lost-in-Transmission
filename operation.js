@@ -7,9 +7,9 @@ const ROLES = Object.keys(CALLSIGNS);
 const WORDS = new Set(Object.values(WORD_GROUPS).flat());
 const DIRECTIONS = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
 export const OUTCOMES = new Set(["cleared", "failed", "complete"]);
-const MISSION_MS = 600_000;
-const ROUND_LIMIT = 8;
-const ACTION_POINTS = 4;
+// Settings a level file may leave out.
+const LEVEL_DEFAULTS = { minutes: 10, rounds: 8, actionPoints: 4, echoChance: 0.25, echoMaxStatic: 2 };
+const JAM_CHANCE_LIMIT = 0.6;
 
 const LEVELS = new URL("./levels/", import.meta.url);
 // Map letters the browser knows how to draw (MAP_TILES in web/screens.js).
@@ -25,9 +25,22 @@ export function checkLevel(level) {
   for (const field of ["package", "destination", "decoy"]) {
     if (!WORDS.has(level[field].toUpperCase())) throw new Error(`"${field}" must be a radio word in web/radio.js`);
   }
+  const positive = (value) => typeof value === "number" && Number.isFinite(value) && value > 0;
+  if (!positive(level.minutes)) throw new Error('"minutes" must be a number above 0');
+  for (const field of ["rounds", "actionPoints"]) {
+    if (!Number.isInteger(level[field]) || level[field] < 1) throw new Error(`"${field}" must be a whole number of 1 or more`);
+  }
+  if (typeof level.echoChance !== "number" || !(level.echoChance >= 0 && level.echoChance <= 1)) {
+    throw new Error('"echoChance" must be a number from 0 to 1');
+  }
+  if (!Number.isInteger(level.echoMaxStatic) || level.echoMaxStatic < 0) {
+    throw new Error('"echoMaxStatic" must be a whole number of 0 or more');
+  }
   const { grid, patrol } = level;
-  if (!Array.isArray(grid) || grid.length !== 8 || grid.some((row) => typeof row !== "string" || row.length !== 8)) {
-    throw new Error('"grid" must be 8 rows of 8 characters');
+  const size = (count) => Number.isInteger(count) && count >= 5 && count <= 12;
+  if (!Array.isArray(grid) || !size(grid.length) || grid.some((row) => typeof row !== "string" || row.length !== grid[0].length) ||
+      !size(grid[0].length)) {
+    throw new Error('"grid" must be 5 to 12 rows, all the same length of 5 to 12 characters');
   }
   const letters = grid.join("");
   const unknown = [...letters].find((tile) => !TILES.has(tile));
@@ -64,7 +77,7 @@ export function checkLevel(level) {
 
 export const MISSIONS = readdirSync(LEVELS).filter((file) => file.endsWith(".json")).sort().map((file) => {
   try {
-    const level = JSON.parse(readFileSync(new URL(file, LEVELS), "utf8"));
+    const level = { ...LEVEL_DEFAULTS, ...JSON.parse(readFileSync(new URL(file, LEVELS), "utf8")) };
     checkLevel(level);
     return level;
   } catch (error) {
@@ -91,9 +104,10 @@ function signalScore(sent, blocked) {
 }
 
 export class Room {
-  constructor(code, now = () => performance.now()) {
+  constructor(code, now = () => performance.now(), random = Math.random) {
     this.code = code;
     this.now = now;
+    this.random = random;
     this.tokens = new Map();
     this.peers = new Map();
     this.missionIndex = 0;
@@ -142,7 +156,7 @@ export class Room {
     this.phase = "briefing";
     this.stage = "order";
     this.round = 1;
-    this.points = ACTION_POINTS;
+    this.points = this.mission.actionPoints;
     this.position = site(this.mission, "S");
     this.packageAt = site(this.mission, "D");
     this.decoyAt = site(this.mission, "X");
@@ -169,9 +183,13 @@ export class Room {
     if (this.phase === "briefing") {
       this.ready.clear();
       this.phase = "active";
-      this.deadline = this.now() + MISSION_MS;
+      this.deadline = this.now() + this.mission.minutes * 60_000;
     } else {
-      if (this.phase === "cleared") this.missionIndex += 1;
+      if (this.phase === "cleared") {
+        this.missionIndex += 1;
+        // ECHO's memory fades between cases so later cases don't open fully jammed.
+        for (const [term, count] of this.words) this.words.set(term, Math.floor(count / 2));
+      }
       if (this.phase === "complete") {
         this.missionIndex = 0;
         this.words.clear();
@@ -298,22 +316,23 @@ export class Room {
       return [false, "Choose one to six radio tiles."];
     }
 
+    // A word heard in 2+ earlier messages may be jammed, more often the more it's used.
+    const { echoChance, echoMaxStatic } = this.mission;
     const terms = new Set(tiles);
-    const learned = [...terms].filter((term) => this.words.get(term) >= 2);
-    learned.sort((left, right) => this.words.get(right) - this.words.get(left) ||
-      (left < right ? -1 : 1));
-    const blocked = new Set(learned.slice(0, this.missionIndex + 1));
+    const jammed = new Set([...terms].filter((term) => (this.words.get(term) ?? 0) >= 2 &&
+      this.random() < Math.min(JAM_CHANCE_LIMIT, echoChance * (this.words.get(term) - 1))));
     for (const term of terms) this.words.set(term, (this.words.get(term) ?? 0) + 1);
-    const heard = tiles.map((tile) => blocked.has(tile) ? REDACTED : tile);
+    let budget = Math.min(echoMaxStatic, Math.max(1, Math.floor(tiles.length / 2)));
+    const heard = tiles.map((tile) => jammed.has(tile) && budget-- > 0 ? REDACTED : tile);
     this.transmissions.push({ round: this.round, sender: role, sent: tiles, heard });
 
     if (role === "handler") {
       this.stage = "moves";
-    } else if (this.round === ROUND_LIMIT) {
+    } else if (this.round === this.mission.rounds) {
       this.finish("failed", "The last round ended before the drop was made.");
     } else {
       this.round += 1;
-      this.points = ACTION_POINTS;
+      this.points = this.mission.actionPoints;
       this.stage = "order";
     }
     return [true, ""];
@@ -355,9 +374,9 @@ export class Room {
       next_case: MISSIONS[this.missionIndex + 1]?.name ?? null,
       drop_label: mission.dropLabel,
       interference: mission.risk, suspicion: this.suspicion, grid,
-      round: this.round, round_limit: ROUND_LIMIT, key: this.keys.has(role),
+      round: this.round, round_limit: mission.rounds, key: this.keys.has(role),
       incoming: this.incoming(role), ready: [...this.ready].sort(),
-      seconds: this.deadline === null ? MISSION_MS / 1000 : Math.max(0, this.deadline - now) / 1000,
+      seconds: this.deadline === null ? mission.minutes * 60 : Math.max(0, this.deadline - now) / 1000,
     };
     if (handler) {
       Object.assign(state, {
@@ -369,7 +388,7 @@ export class Room {
       Object.assign(state, {
         briefing: "The bureau will send orders over the radio. Recover the package and deliver it at the drop point.",
         objective: "Follow Magpie’s orders", position: this.position, bag: this.bag,
-        points: this.points, point_limit: ACTION_POINTS,
+        points: this.points, point_limit: mission.actionPoints,
         guard: visible(...this.guard) ? this.guard : null,
       });
     }

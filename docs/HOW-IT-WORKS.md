@@ -61,7 +61,7 @@ flowchart LR
 | 2 | The Courier | envelope → station | paper | Moderate |
 | 3 | Dead Air | recording → park | paper | Heavy |
 
-Each case is one JSON file in `levels/`, played in filename order. Its 8×8 street map is written as 8 lines of text:
+Each case is one JSON file in `levels/`, played in filename order. Its street map is written as lines of text, one per row. The built-in levels are 8×8, and a level can be anywhere from 5×5 to 12×12:
 
 | Letter | Meaning |
 |---|---|
@@ -75,15 +75,17 @@ Each case is one JSON file in `levels/`, played in filename order. Its 8×8 stre
 
 Each case also has a guard **patrol route**: a list of squares the guard walks forward and back along.
 
-The "Interference" level is shown on the briefing screen, but it doesn't change the rules. How strongly ECHO jams depends on the case number (see [ECHO](#echo-and-the-radio)).
+The "Interference" label is shown on the briefing screen. How hard ECHO actually jams is set by each level's `echoChance` and `echoMaxStatic` (see [ECHO](#echo-and-the-radio)), which the built-in levels match to their label.
 
 ### Limits
 
-| Rule | Value | Constant in `operation.js` |
+These are the defaults. Each level file can change them (see [Extending the game](EXTENDING.md#add-a-new-level)).
+
+| Rule | Default | Set by |
 |---|---|---|
-| Time per case | 10 minutes | `MISSION_MS` |
-| Rounds per case | 8 | `ROUND_LIMIT` |
-| Wren's action points per round | 4 | `ACTION_POINTS` |
+| Time per case | 10 minutes | `minutes` in the level file |
+| Rounds per case | 8 | `rounds` in the level file |
+| Wren's action points per round | 4 | `actionPoints` in the level file |
 | Tiles per message | 1 to 6 | `MESSAGE_LIMIT` in `web/radio.js` |
 
 ### What each player sees
@@ -164,13 +166,17 @@ When a message is sent, the server works through these steps:
 
 1. Take the **different words** in the message. A word that appears twice in one message counts once.
 2. A word is **learned** once it has appeared in **2 or more earlier messages**, from either player.
-3. Sort the learned words, most-used first (ties in alphabetical order).
-4. **Jam the top N**, where N is the case number: 1 word in case 1, 2 in case 2, 3 in case 3. Every copy of a jammed word in the message becomes `[STATIC]`.
+3. **Roll for each learned word.** Its chance of being jammed is the level's `echoChance` × (times used − 1), up to 60%. In Dead Air (`echoChance` 0.3), a word used twice before has a 30% chance, used three times 60%, and never more.
+4. **Cap the damage.** Going left to right, tiles of jammed words become `[STATIC]` until the message hits its limit: the level's `echoMaxStatic` (1 in Dead Drop, 2 in the others), and never more than half the message (but at least 1).
 5. Only then add this message's words to ECHO's memory.
 
-For example, in case 1, Magpie sends `GO NORTH` and then `GO EAST`. Now GO has been used twice, so if the next message is `GO WEST 2`, Wren hears `[STATIC] WEST 2`.
+For example, in case 1, Magpie sends `GO NORTH` and then `GO EAST`. Now GO has been used twice, so if the next message is `GO WEST 2`, there's a 20% chance Wren hears `[STATIC] WEST 2`. The more GO is used, the more likely it gets jammed.
 
-There's no randomness: the same words always give the same result. ECHO's memory (`room.words`) carries over between cases and retries. It's only wiped when the campaign is replayed after case 3.
+ECHO's memory (`room.words`) **halves** when you move on to the next case, so a new case doesn't start with everything already learned. A retry keeps it all. It's wiped completely when the campaign is replayed.
+
+In a simulation of typical play, this jams about 6% of tiles in case 1, 16% in case 2 and 22% in case 3, and never blanks a whole message. (The old fixed rule jammed 15%, 53% and 74%, wiping out several whole messages per case.)
+
+The roll uses a random function passed into `Room` (`Math.random` by default). The tests pass one that always returns 0, so the results are predictable.
 
 ### Decrypt keys
 
@@ -290,7 +296,7 @@ There's no framework and no build step. The browser loads `web/game.js` and the 
 
 ## Tests
 
-Run `npm test`. It uses Node's built-in test runner. The six tests are:
+Run `npm test`. It uses Node's built-in test runner. The eight tests are:
 
 | Test | Checks |
 |---|---|
@@ -298,7 +304,9 @@ Run `npm test`. It uses Node's built-in test runner. The six tests are:
 | `players can create, play, reconnect to, and close a room over /ws` | A real two-player session over WebSockets, including reconnecting |
 | `plays every level from its solution…` | Plays each level file's solution as a full campaign. Also checks each level's peak suspicion, ECHO's memory between cases, and the wipe on replay. |
 | `rejects levels that would crash…` | The level check catches missing markers, unknown letters, bad patrols, non-radio item names, and unreachable squares |
-| `redacts repeated words by frequency…` | ECHO's jamming, the one-use decrypt key, and memory surviving a retry |
+| `jams learned words up to the level's cap…` | ECHO's jamming, the one-use decrypt key, and memory surviving a retry |
+| `ECHO jams by chance, caps static…` | The 60% ceiling, the per-message cap, and memory halving between cases but not on retry |
+| `levels can override time, rounds…` | Default and per-level time, rounds and action points, and a non-8×8 map |
 | `pauses the mission clock…` | The clock stops and resumes correctly when a player drops out |
 
 The tests replace the clock (`now`) with a fake one, so timing is checked without actually waiting.
@@ -332,9 +340,9 @@ For step-by-step recipes (new levels, map rules, new actions and more), see [Ext
 
 | To change… | Edit |
 |---|---|
-| Time, rounds or action points | `MISSION_MS`, `ROUND_LIMIT`, `ACTION_POINTS` in `operation.js` |
+| Time, rounds, action points or map size | That level's file (`minutes`, `rounds`, `actionPoints`, `grid`), or `LEVEL_DEFAULTS` in `operation.js` for all levels |
 | Suspicion amounts | `raiseSuspicion(…)` calls and the `use` action in `operation.js` |
-| How hard ECHO jams | `transmit()` in `operation.js` (the `>= 2` rule and `missionIndex + 1`) |
+| How hard ECHO jams | `echoChance` and `echoMaxStatic` in each level's file. The 60% ceiling (`JAM_CHANCE_LIMIT`) and the "2 earlier messages" rule are in `operation.js`. |
 | Maps, routes, items, briefings | That level's file in `levels/` |
 | Add, remove or reorder levels | Add, delete or rename files in `levels/` |
 | Words players can send | `WORD_GROUPS` in `web/radio.js`. The server only accepts words in this list. |

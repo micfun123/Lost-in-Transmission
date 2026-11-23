@@ -9,6 +9,7 @@ RUN npm ci --omit=dev
 COPY server.js operation.js ./
 COPY levels ./levels
 COPY web ./web
+COPY apps ./apps
 
 USER node
 EXPOSE 8000

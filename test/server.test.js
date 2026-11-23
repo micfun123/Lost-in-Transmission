@@ -2,11 +2,136 @@ import assert from "node:assert/strict";
 import { on, once } from "node:events";
 import test from "node:test";
 import { WebSocket } from "ws";
+import { COOKIE_NAME, LEGIT_CARDS } from "../apps/clearance/clearance.js";
 import { createGameServer } from "../server.js";
 
-test("serves the game and link preview without a build step", async (t) => {
+const LEGIT_IDS = new Set(LEGIT_CARDS.map((card) => card.id));
+
+function extractCookiePair(response) {
+  const header = response.headers.get("set-cookie") ?? "";
+  return header.split(";", 1)[0];
+}
+
+test("gates / until clearance passes, while preserving link preview tags and static assets", async (t) => {
   const base = await startServer(t);
-  const page = await fetch(base, { headers: { "X-Forwarded-Proto": "https" } });
+
+  // Unverified requests receive Form PO1-00 in place with HTTP 200 and OpenGraph tags intact.
+  const gated = await fetch(base, { headers: { "X-Forwarded-Proto": "https" } });
+  assert.equal(gated.status, 200);
+  const gatedHtml = await gated.text();
+  assert.ok(gatedHtml.includes("FORM PO1-00"));
+  assert.ok(gatedHtml.includes('<script type="module" src="/clearance/clearance.js">'));
+  assert.ok(!gatedHtml.includes('<script type="module" src="/game.js">'));
+  assert.ok(gatedHtml.includes(`content="${base.replace("http:", "https:")}/logo.jpg"`));
+  assert.ok(gatedHtml.includes('property="og:title" content="Lost in Transmission"'));
+
+  // Forged cookies stay gated.
+  const forged = await fetch(base, { headers: { Cookie: `${COOKIE_NAME}=PO1-999.fake.bad-sig` } });
+  assert.equal(forged.status, 200);
+  assert.ok((await forged.text()).includes("FORM PO1-00"));
+
+  // Request a clearance challenge from the server.
+  const challengeRes = await fetch(`${base}/api/clearance/challenge`, { method: "POST" });
+  assert.equal(challengeRes.status, 200);
+  const challenge = await challengeRes.json();
+  assert.equal(challenge.grid.length, 9);
+  assert.ok(challenge.grid.every((card) => !("legit" in card)));
+
+  // Reject incomplete Beat 1 (seagull not shooed).
+  const noGull = await fetch(`${base}/api/clearance/verify`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      challengeId: challenge.challengeId,
+      gullShooed: false,
+      tunedFrequency: challenge.targetFrequency,
+      holdMs: 1500,
+      selectedIds: challenge.grid.filter((c) => LEGIT_IDS.has(c.id)).map((c) => c.id),
+    }),
+  });
+  assert.equal(noGull.status, 400);
+  assert.equal((await noGull.json()).stage, "humanity");
+
+  // Reject off-frequency Beat 2.
+  const badRadio = await fetch(`${base}/api/clearance/verify`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      challengeId: challenge.challengeId,
+      gullShooed: true,
+      tunedFrequency: challenge.targetFrequency + 1.5,
+      holdMs: 1500,
+      selectedIds: challenge.grid.filter((c) => LEGIT_IDS.has(c.id)).map((c) => c.id),
+    }),
+  });
+  assert.equal(badRadio.status, 400);
+  assert.equal((await badRadio.json()).stage, "radio");
+
+  // Reject wrong Beat 3 manifest and deal a fresh 3x3 grid on the same challenge.
+  const decoys = challenge.grid.filter((c) => !LEGIT_IDS.has(c.id)).slice(0, 3).map((c) => c.id);
+  const badCustomsRes = await fetch(`${base}/api/clearance/verify`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      challengeId: challenge.challengeId,
+      gullShooed: true,
+      tunedFrequency: challenge.targetFrequency,
+      holdMs: 1500,
+      selectedIds: decoys,
+    }),
+  });
+  assert.equal(badCustomsRes.status, 400);
+  const badCustoms = await badCustomsRes.json();
+  assert.equal(badCustoms.stage, "customs");
+  assert.equal(badCustoms.grid.length, 9);
+  assert.equal(badCustomsRes.headers.get("set-cookie"), null);
+
+  // Submit the 3 legitimate Station PO1 cards from the freshly dealt grid.
+  const validIds = badCustoms.grid.filter((c) => LEGIT_IDS.has(c.id)).map((c) => c.id);
+  assert.equal(validIds.length, 3);
+  const passRes = await fetch(`${base}/api/clearance/verify`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Forwarded-Proto": "https",
+    },
+    body: JSON.stringify({
+      challengeId: challenge.challengeId,
+      gullShooed: true,
+      tunedFrequency: challenge.targetFrequency,
+      holdMs: 1500,
+      selectedIds: validIds,
+    }),
+  });
+  assert.equal(passRes.status, 200);
+  assert.equal((await passRes.json()).ok, true);
+  const setCookieHeader = passRes.headers.get("set-cookie") ?? "";
+  assert.ok(setCookieHeader.includes(`${COOKIE_NAME}=`));
+  assert.ok(setCookieHeader.includes("HttpOnly"));
+  assert.ok(setCookieHeader.includes("SameSite=Lax"));
+  assert.ok(setCookieHeader.includes("Secure"));
+
+  // Replaying a spent challenge fails.
+  const replay = await fetch(`${base}/api/clearance/verify`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      challengeId: challenge.challengeId,
+      gullShooed: true,
+      tunedFrequency: challenge.targetFrequency,
+      holdMs: 1500,
+      selectedIds: validIds,
+    }),
+  });
+  assert.equal(replay.status, 400);
+  assert.equal((await replay.json()).expired, true);
+
+  const clearanceCookie = extractCookiePair(passRes);
+
+  // Cleared request receives the game page and link preview tags.
+  const page = await fetch(base, {
+    headers: { Cookie: clearanceCookie, "X-Forwarded-Proto": "https" },
+  });
   assert.equal(page.status, 200);
   const html = await page.text();
   assert.ok(html.includes('<script type="module" src="/game.js">'));
@@ -14,11 +139,21 @@ test("serves the game and link preview without a build step", async (t) => {
   assert.ok(html.includes('rel="icon" href="/favicon.png"'));
   assert.ok(html.includes('rel="apple-touch-icon" href="/apple-touch-icon.png"'));
 
+  // POST /api/clearance/reset expires the cookie so subsequent loads hit the gate again.
+  const resetRes = await fetch(`${base}/api/clearance/reset`, { method: "POST" });
+  assert.equal(resetRes.status, 200);
+  const resetCookieHeader = resetRes.headers.get("set-cookie") ?? "";
+  assert.ok(resetCookieHeader.includes(`${COOKIE_NAME}=;`));
+  assert.ok(resetCookieHeader.includes("Max-Age=0"));
+  const relocked = await fetch(base, { headers: { Cookie: extractCookiePair(resetRes) } });
+  assert.ok((await relocked.text()).includes("FORM PO1-00"));
+
   const assets = [
     ["/game.js", "text/javascript"], ["/screens.js", "text/javascript"],
     ["/radio.js", "text/javascript"], ["/style.css", "text/css"],
     ["/logo.jpg", "image/jpeg"], ["/favicon.png", "image/png"], ["/apple-touch-icon.png", "image/png"],
     ["/assets/fonts/SpecialElite-Regular.ttf", "font/ttf"],
+    ["/clearance/clearance.css", "text/css"], ["/clearance/clearance.js", "text/javascript"],
   ];
   for (const [path, mime] of assets) {
     const response = await fetch(base + path);

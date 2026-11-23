@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0f1416">
+  <!-- LINK_PREVIEW -->
+  <title>Station PO1 — Clearance Required</title>
+  <link rel="icon" href="/favicon.png" type="image/png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="stylesheet" href="/clearance/clearance.css">
+  <script type="module" src="/clearance/clearance.js"></script>
+</head>
+<body class="bureau-page clearance-page">
+  <header class="checkpoint-bar">
+    <div class="checkpoint-bar__inner">
+      <div class="checkpoint-bar__brand">
+        <span class="checkpoint-bar__lamp" aria-hidden="true"></span>
+        <span>STATION PO1 // CHECKPOINT ACTIVE</span>
+      </div>
+      <div class="checkpoint-bar__controls">
+        <span class="checkpoint-bar__dest" id="checkpoint-dest">DEST: LOST IN TRANSMISSION</span>
+        <button
+          type="button"
+          class="checkpoint-bar__sound"
+          id="sound-toggle"
+          aria-pressed="true"
+        >SOUND: ON</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="bureau-shell clearance-shell">
+    <section class="bureau-paper clearance-dossier" id="clearance-dossier" aria-labelledby="clearance-heading">
+      <div class="clearance-dossier__head">
+        <div>
+          <span class="bureau-caption">FORM PO1-00 · ENTRY CLEARANCE PROTOCOL · EST. 1974</span>
+          <h1 id="clearance-heading" class="bureau-title clearance-dossier__title">
+            Prove You Are Human (And Not From Southampton)
+          </h1>
+        </div>
+        <span class="bureau-stamp bureau-stamp--classified" id="dossier-stamp">CLEARANCE PENDING</span>
+      </div>
+
+      <p class="clearance-dossier__intro" id="clearance-intro">
+        Complete all three Station PO1 vetting steps below to unlock <strong id="dest-label">Lost in Transmission</strong>.
+        No robots, no ECHO relays, and strictly no SO14 personnel.
+      </p>
+
+      <div class="clearance-cookie-alert" id="cookie-alert" role="alert" hidden>
+        Your browser accepted clearance, then blocked the session cookie on reload. Enable cookies for this site and submit Form PO1-00 again.
+      </div>
+
+      <ol class="clearance-receipts" id="clearance-receipts" aria-label="Completed clearance steps">
+        <li class="clearance-receipt" id="receipt-humanity" hidden>
+          <span class="clearance-receipt__code">FORM PO1-A</span>
+          <span class="clearance-receipt__text">Humanity confirmed. Southsea seagull repelled.</span>
+          <span class="bureau-stamp bureau-stamp--signal clearance-receipt__stamp">CLEARED</span>
+        </li>
+        <li class="clearance-receipt" id="receipt-radio" hidden>
+          <span class="clearance-receipt__code">FORM PO1-B</span>
+          <span class="clearance-receipt__text" id="receipt-radio-text">Carrier locked through ECHO static.</span>
+          <span class="bureau-stamp bureau-stamp--signal clearance-receipt__stamp">CLEARED</span>
+        </li>
+        <li class="clearance-receipt" id="receipt-customs" hidden>
+          <span class="clearance-receipt__code">FORM PO1-C</span>
+          <span class="clearance-receipt__text">Coastal customs manifest verified.</span>
+          <span class="bureau-stamp bureau-stamp--signal clearance-receipt__stamp">CLEARED</span>
+        </li>
+      </ol>
+
+      <!-- BEAT 1: Form PO1-A — Confirm Humanity -->
+      <section class="clearance-stage" id="stage-humanity" aria-labelledby="stage-humanity-title">
+        <div class="clearance-stage__head">
+          <span class="bureau-caption">STEP 1 OF 3 · FORM PO1-A</span>
+          <h2 id="stage-humanity-title" class="bureau-title clearance-stage__title">Confirm Humanity</h2>
+        </div>
+
+        <div class="gull-arena" id="gull-arena">
+          <button
+            type="button"
+            class="humanity-check"
+            id="humanity-check"
+            role="checkbox"
+            aria-checked="false"
+          >
+            <span class="humanity-check__box" aria-hidden="true">
+              <svg class="humanity-check__tick" id="humanity-tick" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="4 13 10 19 20 6"></polyline>
+              </svg>
+            </span>
+            <span class="humanity-check__label">
+              <strong>I am human, and not from Southampton.</strong>
+              <span>Portsmouth Maritime Authority Regulation 1974/PO1</span>
+            </span>
+          </button>
+
+          <button
+            type="button"
+            class="gull-thief"
+            id="gull-thief"
+            aria-label="Shoo the Southsea seagull to reclaim your checkmark"
+            hidden
+          >
+            <svg class="gull-thief__svg" viewBox="0 0 110 76" aria-hidden="true">
+              <!-- Stolen green checkmark in beak -->
+              <polyline class="gull-thief__stolen-tick" points="86 24 91 30 101 18" fill="none" stroke="#216137" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"></polyline>
+              <!-- Tail -->
+              <polygon points="10,42 26,34 26,48" fill="#465259"></polygon>
+              <!-- Body -->
+              <ellipse cx="47" cy="44" rx="24" ry="15" fill="#f7f4eb" stroke="#1e1a14" stroke-width="2.2"></ellipse>
+              <!-- Wing -->
+              <path d="M27,40 C35,24 58,24 64,42 C53,48 37,48 27,40 Z" fill="#9ea8ad" stroke="#1e1a14" stroke-width="2"></path>
+              <!-- Head & neck -->
+              <circle cx="71" cy="27" r="10" fill="#f7f4eb" stroke="#1e1a14" stroke-width="2.2"></circle>
+              <!-- Mischievous eyebrow & eye -->
+              <circle cx="74" cy="25" r="2" fill="#1e1a14"></circle>
+              <line x1="70" y1="21" x2="77" y2="23" stroke="#1e1a14" stroke-width="1.8" stroke-linecap="round"></line>
+              <!-- Beak -->
+              <polygon points="80,25 95,29 80,32" fill="#f2a541" stroke="#1e1a14" stroke-width="1.8" stroke-linejoin="round"></polygon>
+              <!-- Legs -->
+              <line x1="43" y1="58" x2="40" y2="70" stroke="#d9822b" stroke-width="2.4" stroke-linecap="round"></line>
+              <line x1="53" y1="58" x2="56" y2="70" stroke="#d9822b" stroke-width="2.4" stroke-linecap="round"></line>
+            </svg>
+            <span class="gull-thief__tag">SHOO GULL!</span>
+          </button>
+
+          <p class="gull-status" id="gull-status" role="status" aria-live="polite">
+            Tick the box to begin Station PO1 entry vetting.
+          </p>
+        </div>
+      </section>
+
+      <!-- BEAT 2: Form PO1-B — Lock Carrier Frequency -->
+      <section class="clearance-stage" id="stage-radio" aria-labelledby="stage-radio-title" hidden>
+        <div class="clearance-stage__head">
+          <span class="bureau-caption">STEP 2 OF 3 · FORM PO1-B</span>
+          <h2 id="stage-radio-title" class="bureau-title clearance-stage__title">Lock Carrier Frequency</h2>
+        </div>
+
+        <p class="clearance-stage__copy">
+          Tune the dial into the green target window and hold it steady while <strong>ECHO</strong> tries to nudge you off-band.
+        </p>
+
+        <div class="bureau-console radio-rig">
+          <div class="radio-rig__readouts">
+            <div class="radio-rig__metric">
+              <span class="bureau-caption">TARGET CARRIER</span>
+              <strong class="radio-rig__value radio-rig__value--target" id="radio-target">--.- MHz</strong>
+            </div>
+            <div class="radio-rig__metric">
+              <span class="bureau-caption">LIVE NEEDLE</span>
+              <strong class="radio-rig__value" id="radio-live">70.0 MHz</strong>
+            </div>
+            <div class="radio-rig__metric radio-rig__metric--status">
+              <span class="bureau-caption">SIGNAL STATUS</span>
+              <strong class="radio-rig__badge" id="radio-badge">STATIC</strong>
+            </div>
+          </div>
+
+          <div class="radio-scope" aria-hidden="true">
+            <svg id="radio-wave" viewBox="0 0 360 54" preserveAspectRatio="none">
+              <line x1="0" y1="27" x2="360" y2="27" stroke="#243136" stroke-width="1"></line>
+              <path id="radio-wave-path" d="M 0 27 L 360 27" fill="none" stroke="#f2a541" stroke-width="2"></path>
+            </svg>
+          </div>
+
+          <div class="radio-band" aria-hidden="true">
+            <div class="radio-band__ticks">
+              <span>70</span><span>72</span><span>74</span><span>76</span><span>78</span><span>79</span>
+            </div>
+            <div class="radio-band__track">
+              <div class="radio-band__zone" id="radio-target-zone"></div>
+              <div class="radio-band__needle" id="radio-needle"></div>
+            </div>
+          </div>
+
+          <div class="radio-controls">
+            <button type="button" class="bureau-btn radio-nudge" id="radio-down" aria-label="Tune frequency down 0.2 MHz">-0.2</button>
+            <label class="radio-slider-wrap">
+              <span class="sr-only">Carrier frequency dial in megahertz</span>
+              <input
+                type="range"
+                id="radio-slider"
+                class="radio-slider"
+                min="70"
+                max="79"
+                step="0.05"
+                value="70.5"
+              >
+            </label>
+            <button type="button" class="bureau-btn radio-nudge" id="radio-up" aria-label="Tune frequency up 0.2 MHz">+0.2</button>
+          </div>
+
+          <div class="radio-lock">
+            <div class="radio-lock__head">
+              <span id="radio-hint" role="status" aria-live="polite">Dial toward the target band. ECHO static is active.</span>
+              <span id="radio-lock-pct">0%</span>
+            </div>
+            <div class="radio-lock__bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="radio-progress">
+              <div class="radio-lock__fill" id="radio-lock-fill"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- BEAT 3: Form PO1-C — Coastal Customs Inspection -->
+      <section class="clearance-stage" id="stage-customs" aria-labelledby="stage-customs-title" hidden>
+        <div class="clearance-stage__head">
+          <span class="bureau-caption">STEP 3 OF 3 · FORM PO1-C</span>
+          <h2 id="stage-customs-title" class="bureau-title clearance-stage__title">Coastal Customs Inspection</h2>
+        </div>
+
+        <div class="customs-bar">
+          <p class="clearance-stage__copy">
+            Stamp the <strong>3 genuine Station PO1 / Portsmouth items</strong>. Leave all SO14, ECHO, and wildlife contraband unstamped.
+          </p>
+          <span class="customs-counter" id="customs-counter">0 / 3 STAMPED</span>
+        </div>
+
+        <div class="customs-reject" id="customs-reject" role="alert" hidden>
+          <span class="bureau-stamp bureau-stamp--so14 customs-reject__stamp" id="customs-reject-stamp">SO14 SUSPECTED</span>
+          <p class="customs-reject__text" id="customs-reject-text"></p>
+        </div>
+
+        <div class="customs-grid" id="customs-grid" role="group" aria-label="Coastal customs inspection items"></div>
+
+        <div class="customs-actions">
+          <button type="button" class="bureau-btn bureau-btn--primary" id="customs-submit" disabled>
+            Stamp 3 items to submit
+          </button>
+        </div>
+      </section>
+
+      <!-- GRANTED CELEBRATION -->
+      <section class="clearance-granted" id="clearance-granted" role="status" aria-live="polite" hidden>
+        <span class="bureau-stamp bureau-stamp--signal clearance-granted__stamp" id="granted-stamp">CLEARANCE GRANTED // PO1</span>
+        <p class="clearance-granted__text" id="granted-text">Opening Station PO1...</p>
+      </section>
+    </section>
+
+    <footer class="bureau-footer">
+      <span>SOLENT SIGNAL BUREAU · STATION PO1 · CHECKPOINT GATE</span>
+      <span>ALL VISITORS VETTED FOR HUMANITY &amp; SO14 CONTAMINATION</span>
+    </footer>
+  </main>
+</body>
+</html>

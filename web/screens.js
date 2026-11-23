@@ -44,7 +44,11 @@ function number(value) {
 }
 
 function station() {
-  return node("header", { class: "station" }, "THE BUREAU · KESSEL · 1974", caption("CH 7.215 MHz"));
+  return node("header", { class: "station" },
+    "THE BUREAU · KESSEL · 1974",
+    node("span", { class: "station-meta" },
+      caption("CH 7.215 MHz"),
+      button("[LOCK]", "lock", { style: "lock-btn", label: "Lock station and re-run clearance captcha" })));
 }
 
 function stamp(text, success = false) {

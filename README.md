@@ -62,4 +62,8 @@ For internet play, put it behind an HTTPS reverse proxy that forwards both the p
 
 ## Team
 
-Made by Michael Parker, Kieran Shaw and Abigail Hinchliffe.
+Made by:
+
+- **Michael** ([@micfun123](https://github.com/micfun123))
+- **Kieran** ([@JakeIV](https://github.com/JakeIV))
+- **Abi** ([@AbigailHinchliffe](https://github.com/AbigailHinchliffe))

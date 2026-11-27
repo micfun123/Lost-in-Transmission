@@ -67,7 +67,8 @@ test("gates / until clearance passes, while preserving link preview tags and sta
   assert.equal(badRadio.status, 400);
   assert.equal((await badRadio.json()).stage, "radio");
 
-  // Reject wrong Beat 3 manifest and deal a fresh 3x3 grid on the same challenge.
+  // Reject wrong Beat 3 manifest and remove only the wrong cards from the existing grid.
+  const originalLegitIds = challenge.grid.filter((c) => LEGIT_IDS.has(c.id)).map((c) => c.id);
   const decoys = challenge.grid.filter((c) => !LEGIT_IDS.has(c.id)).slice(0, 3).map((c) => c.id);
   const badCustomsRes = await fetch(`${base}/api/clearance/verify`, {
     method: "POST",
@@ -83,12 +84,14 @@ test("gates / until clearance passes, while preserving link preview tags and sta
   assert.equal(badCustomsRes.status, 400);
   const badCustoms = await badCustomsRes.json();
   assert.equal(badCustoms.stage, "customs");
-  assert.equal(badCustoms.grid.length, 9);
+  assert.equal(badCustoms.grid.length, 6);
+  assert.deepEqual(badCustoms.removedIds, decoys);
+  assert.ok(badCustoms.grid.every((c) => !decoys.includes(c.id)));
   assert.equal(badCustomsRes.headers.get("set-cookie"), null);
 
-  // Submit the 3 legitimate Station PO1 cards from the freshly dealt grid.
+  // Submit the 3 legitimate Station PO1 cards remaining on the narrowed grid.
   const validIds = badCustoms.grid.filter((c) => LEGIT_IDS.has(c.id)).map((c) => c.id);
-  assert.equal(validIds.length, 3);
+  assert.deepEqual(validIds, originalLegitIds);
   const passRes = await fetch(`${base}/api/clearance/verify`, {
     method: "POST",
     headers: {

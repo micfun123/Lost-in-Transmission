@@ -591,6 +591,35 @@ function openCustomsStage() {
   if (firstCard) firstCard.focus();
 }
 
+function syncCustomsGrid(grid) {
+  const remainingIds = new Set(grid.map((card) => card.id));
+  const existingCards = [...elements.customsGrid.querySelectorAll(".customs-card")];
+  const existingIds = new Set(existingCards.map((button) => button.dataset.cardId));
+
+  const isSubset =
+    grid.length <= existingCards.length
+    && grid.every((card) => existingIds.has(card.id));
+
+  if (!isSubset) {
+    renderCustomsGrid(grid);
+    return;
+  }
+
+  for (const id of [...state.selectedIds]) {
+    if (!remainingIds.has(id)) {
+      state.selectedIds.delete(id);
+    }
+  }
+
+  for (const button of existingCards) {
+    if (!remainingIds.has(button.dataset.cardId)) {
+      button.remove();
+    }
+  }
+
+  updateCustomsControls();
+}
+
 function triggerGridShake() {
   if (REDUCED_MOTION) return;
   elements.customsGrid.classList.remove("customs-grid--shake");
@@ -646,7 +675,7 @@ async function submitClearance() {
 
     audio.playStamp("reject");
     elements.customsRejectStamp.textContent = data.stamp || "SO14 SUSPECTED";
-    elements.customsRejectText.textContent = data.reason || "Customs rejected your manifest. Try the fresh set below.";
+    elements.customsRejectText.textContent = data.reason || "Customs rejected your manifest. Wrong items have been removed.";
     elements.customsReject.hidden = false;
 
     if (data.expired && data.challenge) {
@@ -665,7 +694,7 @@ async function submitClearance() {
       elements.gullStatus.className = "gull-status gull-status--alert";
       applyChallenge(data.challenge);
     } else if (Array.isArray(data.grid)) {
-      renderCustomsGrid(data.grid);
+      syncCustomsGrid(data.grid);
       triggerGridShake();
     }
   } catch {

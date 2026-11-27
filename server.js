@@ -1,5 +1,5 @@
 // HTTP and WebSocket server: serves web/ and passes player commands to the rooms in operation.js.
-import { randomInt } from "node:crypto";
+import { createHash, randomInt, timingSafeEqual } from "node:crypto";
 import { appendFile, readFile, readFileSync } from "node:fs";
 import { createServer } from "node:http";
 import { pathToFileURL } from "node:url";
@@ -8,6 +8,7 @@ import { WebSocket, WebSocketServer } from "ws";
 import { qrcode } from "qrcode-generator";
 import { Room } from "./operation.js";
 import { createClearanceRouter } from "./apps/clearance/clearance.js";
+import { report } from "./scripts/stats.js";
 
 const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const MAX_ROOMS = 100;
@@ -59,7 +60,37 @@ function embedTags(request) {
   }).join("\n  ");
 }
 
-function createRequestHandler(clearanceRouter, multiplayer) {
+const digest = (text) => createHash("sha256").update(text).digest();
+
+// HTTP Basic auth against STATS_PASSWORD. Without a password or analytics file, /stats doesn't exist.
+function serveStats(request, response, { analyticsFile, statsPassword }) {
+  if (!analyticsFile || !statsPassword) {
+    response.writeHead(404).end();
+    return;
+  }
+  const [scheme, encoded = ""] = (request.headers.authorization ?? "").split(" ");
+  const credentials = scheme === "Basic" ? Buffer.from(encoded, "base64").toString("utf8") : "";
+  const password = credentials.slice(credentials.indexOf(":") + 1);
+  if (!credentials.includes(":") || !timingSafeEqual(digest(password), digest(statsPassword))) {
+    response.writeHead(401, { "WWW-Authenticate": 'Basic realm="Lost in Transmission stats", charset="UTF-8"' }).end();
+    return;
+  }
+  readFile(analyticsFile, "utf8", (error, text) => {
+    let body;
+    try {
+      if (error && error.code !== "ENOENT") throw error;
+      body = report(text ?? "");
+    } catch (failure) {
+      console.error("Could not build stats:", failure.message);
+      response.writeHead(500).end();
+      return;
+    }
+    response.writeHead(200, { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" });
+    response.end(request.method === "HEAD" ? undefined : body);
+  });
+}
+
+function createRequestHandler(clearanceRouter, multiplayer, stats) {
   return async function servePage(request, response) {
     let url;
     try {
@@ -114,7 +145,9 @@ function createRequestHandler(clearanceRouter, multiplayer) {
     }
 
     const path = url.pathname;
-    if (path === "/") {
+    if (path === "/stats") {
+      serveStats(request, response, stats);
+    } else if (path === "/") {
       const htmlTemplate = clearanceRouter.hasValidClearance(request) ? INDEX : CLEARANCE_PAGE_HTML;
       response.writeHead(200, {
         "Content-Type": "text/html; charset=utf-8",
@@ -314,7 +347,7 @@ export function createGameServer(nowOrOptions = () => performance.now()) {
   const now = options.now ?? (() => performance.now());
   const multiplayer = new Multiplayer(now, analyticsWriter(options.analyticsFile));
   const clearanceRouter = createClearanceRouter(options.clearance);
-  const server = createServer(createRequestHandler(clearanceRouter, multiplayer));
+  const server = createServer(createRequestHandler(clearanceRouter, multiplayer, options));
   const sockets = new WebSocketServer({ noServer: true, maxPayload: 2048 });
   const responsive = new WeakSet();
   sockets.on("connection", (socket) => {
@@ -365,7 +398,10 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     if (!/^\d+$/.test(values.port) || !Number.isInteger(port) || port > 65535) {
       throw new Error("Port must be an integer from 0 to 65535.");
     }
-    const server = createGameServer({ analyticsFile: process.env.ANALYTICS_FILE });
+    const server = createGameServer({
+      analyticsFile: process.env.ANALYTICS_FILE,
+      statsPassword: process.env.STATS_PASSWORD,
+    });
     server.listen(port, values.host, () => {
       const hostname = values.host.includes(":") ? `[${values.host}]` : values.host;
       console.log(`Lost in Transmission listening at http://${hostname}:${server.address().port}`);

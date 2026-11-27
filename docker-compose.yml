@@ -6,6 +6,9 @@ services:
       - "127.0.0.1:8620:8000"
     volumes:
       - analytics:/data
+    environment:
+      # Set in .env next to this file on the server. Unset means /stats returns 404.
+      STATS_PASSWORD: ${STATS_PASSWORD:-}
     restart: unless-stopped
 
 volumes:

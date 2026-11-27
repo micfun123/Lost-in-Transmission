@@ -350,13 +350,15 @@ If `ANALYTICS_FILE` is set, the server appends one JSON line per event to that f
 
 No IP addresses, names or messages are recorded. Rooms still open when the server restarts don't write a `room` line, but their finished cases are already in the file.
 
-To see the summary on the server:
+To see the summary, open `/stats` (https://transmission.michaelrbparker.com/stats). The browser asks for a username and password: any username works, and the password is `STATS_PASSWORD`. Docker Compose reads it from a `.env` file next to `docker-compose.yml` on the server, which git ignores. If it isn't set, `/stats` returns 404. Use a long random password, such as one from `openssl rand -base64 24`, because the page has no lockout after wrong guesses.
+
+The same summary is available from the command line on the server:
 
 ```sh
 docker compose exec web node scripts/stats.js
 ```
 
-It prints the number of games, the median and average time per game, how many cases each game cleared, and attempts, clears, fails and median clear time for each case.
+It shows the number of games, the median and average time per game, how many cases each game cleared, and attempts, clears, fails and median clear time for each case.
 
 ## Changing things
 

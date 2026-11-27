@@ -1,6 +1,6 @@
 // HTTP and WebSocket server: serves web/ and passes player commands to the rooms in operation.js.
 import { randomInt } from "node:crypto";
-import { readFile, readFileSync } from "node:fs";
+import { appendFile, readFile, readFileSync } from "node:fs";
 import { createServer } from "node:http";
 import { pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
@@ -143,10 +143,32 @@ function createRequestHandler(clearanceRouter, multiplayer) {
   };
 }
 
+// Appends one JSON line per event. No IPs or other personal data are recorded.
+function analyticsWriter(file) {
+  if (!file) return () => {};
+  return (event) => {
+    const line = `${JSON.stringify({ at: new Date().toISOString(), ...event })}\n`;
+    appendFile(file, line, (error) => {
+      if (error) console.error("Could not write analytics:", error.message);
+    });
+  };
+}
+
 class Multiplayer {
-  constructor(now) {
+  constructor(now, track = () => {}) {
     this.now = now;
+    this.track = track;
     this.rooms = new Map();
+  }
+
+  // shortcut: rooms still open when the server restarts (e.g. a deploy) never log this; persist rooms if that matters.
+  endRoom(room) {
+    this.rooms.delete(room.code);
+    this.track({
+      event: "room", room: room.code, paired: room.tokens.has("agent"),
+      seconds: Math.round(((room.emptySince ?? this.now()) - room.createdAt) / 1000),
+      cases_cleared: room.casesCleared, last_case: room.missionIndex + 1, phase: room.phase,
+    });
   }
 
   send(socket, data) {
@@ -195,7 +217,7 @@ class Multiplayer {
       const message = player === client ? "" : "The other player closed the room.";
       this.send(player.socket, { type: "left", text: message });
     }
-    this.rooms.delete(room.code);
+    this.endRoom(room);
   }
 
   createRoom(client) {
@@ -208,6 +230,7 @@ class Multiplayer {
       code = Array.from({ length: 5 }, () => CODE_ALPHABET[randomInt(CODE_ALPHABET.length)]).join("");
     } while (this.rooms.has(code));
     const room = new Room(code, this.now);
+    room.track = this.track;
     this.rooms.set(code, room);
     this.join(client, room, "handler");
   }
@@ -268,7 +291,7 @@ class Multiplayer {
     const now = this.now();
     for (const [code, room] of this.rooms) {
       if (room.emptySince !== null && now - room.emptySince > EMPTY_ROOM_MS) {
-        this.rooms.delete(code);
+        this.endRoom(room);
       } else if (room.expireMission()) {
         this.publish(room);
       }
@@ -289,7 +312,7 @@ function sameOrigin(request) {
 export function createGameServer(nowOrOptions = () => performance.now()) {
   const options = typeof nowOrOptions === "function" ? { now: nowOrOptions } : (nowOrOptions ?? {});
   const now = options.now ?? (() => performance.now());
-  const multiplayer = new Multiplayer(now);
+  const multiplayer = new Multiplayer(now, analyticsWriter(options.analyticsFile));
   const clearanceRouter = createClearanceRouter(options.clearance);
   const server = createServer(createRequestHandler(clearanceRouter, multiplayer));
   const sockets = new WebSocketServer({ noServer: true, maxPayload: 2048 });
@@ -342,7 +365,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     if (!/^\d+$/.test(values.port) || !Number.isInteger(port) || port > 65535) {
       throw new Error("Port must be an integer from 0 to 65535.");
     }
-    const server = createGameServer();
+    const server = createGameServer({ analyticsFile: process.env.ANALYTICS_FILE });
     server.listen(port, values.host, () => {
       const hostname = values.host.includes(":") ? `[${values.host}]` : values.host;
       console.log(`Lost in Transmission listening at http://${hostname}:${server.address().port}`);

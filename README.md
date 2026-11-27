@@ -67,7 +67,7 @@ npm start
 
 Open http://localhost:8000 in two browser tabs, or on two devices with `npm start -- --host 0.0.0.0` and `http://YOUR_IP:8000`. Run `npm test` to check the game rules, the multiplayer server and every level's solution.
 
-To run it with Docker, use `docker compose up -d --build`. It serves the game on http://127.0.0.1:8620.
+To run it with Docker, use `docker compose up -d --build`. It serves the game on http://127.0.0.1:8620. It also records anonymous play analytics (time per game and how far players get). See [Analytics](docs/HOW-IT-WORKS.md#analytics).
 
 For internet play, put it behind an HTTPS reverse proxy that forwards both the page and the `/ws` WebSocket upgrade. Rooms live in server memory, so a restart ends any games in progress.
 

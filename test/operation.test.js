@@ -46,6 +46,7 @@ test("plays every level from its solution, keeps ECHO's memory between cases, an
     ready(room);
   }
   assert.equal(room.snapshot("agent").mission, 1);
+  assert.equal(room.casesCleared, MISSIONS.length);
   ready(room);
   command(room, "handler", "radio", { tiles: ["GO"] });
   assert.deepEqual(room.incoming("agent").tiles, ["GO"]);
@@ -89,6 +90,8 @@ test("jams learned words up to the level's cap, allows one decrypt, and keeps me
 test("pauses the mission clock on loss of either player and resumes the remaining time", () => {
   let now = 0;
   const room = pairedRoom(() => now);
+  const events = [];
+  room.track = (event) => events.push(event);
   ready(room);
   now = 60_000;
   const token = room.tokens.get("agent");
@@ -103,6 +106,8 @@ test("pauses the mission clock on loss of either player and resumes the remainin
   assert.equal(room.expireMission(), true);
   assert.equal(room.snapshot("agent").seconds, 0);
   assert.match(room.snapshot("handler").result, /Time ran out/);
+  // The 640 s pause isn't counted as time played.
+  assert.deepEqual([events.length, events[0].outcome, events[0].seconds], [1, "failed", 900]);
 });
 
 test("rejects levels that would crash or can't be finished", () => {

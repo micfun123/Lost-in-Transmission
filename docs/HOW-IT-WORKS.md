@@ -341,6 +341,23 @@ flowchart LR
 
 A deploy restarts the server, which **ends every game in progress**.
 
+## Analytics
+
+If `ANALYTICS_FILE` is set, the server appends one JSON line per event to that file. Docker sets it to `/data/analytics.jsonl` on the `analytics` volume, so the data survives deploys. Running `npm start` locally records nothing.
+
+- **`case`** is written when a case ends: the case number and name, the outcome (`cleared`, `complete` or `failed`), the seconds played (pauses not counted) and the round reached.
+- **`room`** is written when a room is closed or deleted after 10 minutes empty: whether a second player joined, the seconds from creation until it emptied, the cases cleared, and the case and phase it ended on.
+
+No IP addresses, names or messages are recorded. Rooms still open when the server restarts don't write a `room` line, but their finished cases are already in the file.
+
+To see the summary on the server:
+
+```sh
+docker compose exec web node scripts/stats.js
+```
+
+It prints the number of games, the median and average time per game, how many cases each game cleared, and attempts, clears, fails and median clear time for each case.
+
 ## Changing things
 
 For step-by-step recipes (new levels, map rules, new actions and more), see [Extending the game](EXTENDING.md).

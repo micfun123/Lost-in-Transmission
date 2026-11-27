@@ -103,6 +103,18 @@ function signalScore(sent, blocked) {
   return sent ? Math.round(100 * (sent - blocked) / sent) : 100;
 }
 
+function mostJammedWord(jammedWords) {
+  let top = null;
+  for (const [word, count] of jammedWords) {
+    if (!top || count > top.count) top = { word, count };
+  }
+  return top;
+}
+
+function objectiveLabel(mission) {
+  return `${mission.package[0].toUpperCase()}${mission.package.slice(1)} → ${mission.destination}`;
+}
+
 export class Room {
   constructor(code, now = () => performance.now(), random = Math.random) {
     this.code = code;
@@ -113,8 +125,22 @@ export class Room {
     this.missionIndex = 0;
     this.words = new Map();
     this.emptySince = null;
+    this.resetCampaign();
     this.prepareCase();
     this.phase = "lobby";
+  }
+
+  resetCampaign() {
+    this.campaign = {
+      rounds: 0,
+      retries: 0,
+      transmissions: 0,
+      sent: 0,
+      blocked: 0,
+      peakSuspicion: 0,
+      jammedWords: new Map(),
+      cases: new Map(),
+    };
   }
 
   get mission() {
@@ -184,15 +210,19 @@ export class Room {
       this.ready.clear();
       this.phase = "active";
       this.deadline = this.now() + this.mission.minutes * 60_000;
+    } else if (this.phase === "complete") {
+      this.ready.clear();
+      this.phase = "finale";
     } else {
       if (this.phase === "cleared") {
         this.missionIndex += 1;
         // ECHO's memory fades between cases so later cases don't open fully jammed.
         for (const [term, count] of this.words) this.words.set(term, Math.floor(count / 2));
       }
-      if (this.phase === "complete") {
+      if (this.phase === "finale") {
         this.missionIndex = 0;
         this.words.clear();
+        this.resetCampaign();
       }
       this.prepareCase();
     }
@@ -206,15 +236,38 @@ export class Room {
   }
 
   finish(phase, result) {
+    if (this.phase !== "active") return;
     this.phase = phase;
     this.result = result;
     this.finishedAt = this.now();
+    const sent = this.transmissions.reduce((sum, entry) => sum + entry.sent.length, 0);
+    const blocked = this.transmissions.reduce((sum, entry) => sum + redactionCount(entry.heard), 0);
+    this.campaign.rounds += this.round;
+    if (phase === "failed") this.campaign.retries += 1;
+    this.campaign.transmissions += this.transmissions.length;
+    this.campaign.sent += sent;
+    this.campaign.blocked += blocked;
+    this.campaign.peakSuspicion = Math.max(this.campaign.peakSuspicion, this.peakSuspicion);
+    for (const entry of this.transmissions) {
+      entry.heard.forEach((tile, index) => {
+        if (tile !== REDACTED) return;
+        const word = entry.sent[index];
+        this.campaign.jammedWords.set(word, (this.campaign.jammedWords.get(word) ?? 0) + 1);
+      });
+    }
+    if (phase === "cleared" || phase === "complete") {
+      this.campaign.cases.set(this.missionIndex, {
+        rounds: this.round,
+        signal: signalScore(sent, blocked),
+        peakSuspicion: this.peakSuspicion,
+      });
+    }
   }
 
   command(role, data) {
     let action = data.type;
     if (!this.paired) return [false, "Waiting for your partner."];
-    if (action === "ready" && (this.phase === "briefing" || OUTCOMES.has(this.phase))) {
+    if (action === "ready" && (this.phase === "briefing" || OUTCOMES.has(this.phase) || this.phase === "finale")) {
       return this.confirm(role);
     }
     if (this.phase !== "active") return [false, "The channel is on hold."];
@@ -381,7 +434,7 @@ export class Room {
     if (handler) {
       Object.assign(state, {
         briefing: mission.briefing,
-        objective: `${mission.package[0].toUpperCase()}${mission.package.slice(1)} → ${mission.destination}`,
+        objective: objectiveLabel(mission),
         package: mission.package, patrol: mission.patrol, last_seen: this.lastSeen,
       });
     } else {
@@ -398,6 +451,32 @@ export class Room {
       Object.assign(state, {
         result: this.result, peak_suspicion: this.peakSuspicion, signal: signalScore(sent, blocked),
         transmissions: this.transmissions, activity: this.activity,
+      });
+    }
+    if (this.phase === "finale") {
+      const { rounds, retries, transmissions, sent, blocked, peakSuspicion, jammedWords, cases } = this.campaign;
+      Object.assign(state, {
+        campaign: {
+          cases_cleared: MISSIONS.length,
+          rounds,
+          retries,
+          transmissions,
+          tiles_sent: sent,
+          intercepts: blocked,
+          signal: signalScore(sent, blocked),
+          peak_suspicion: peakSuspicion,
+          most_jammed: mostJammedWord(jammedWords),
+        },
+        dossier: MISSIONS.map((entry, index) => {
+          const stats = cases.get(index);
+          return {
+            mission: index + 1,
+            name: entry.name,
+            briefing: entry.briefing,
+            objective: objectiveLabel(entry),
+            ...(stats ? { rounds: stats.rounds, signal: stats.signal, peak_suspicion: stats.peakSuspicion } : {}),
+          };
+        }),
       });
     }
     return state;

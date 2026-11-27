@@ -542,6 +542,41 @@ button.key:not(:disabled) {
 .incoming-echo strong { display: block; font-size: 1.4rem; }
 .incoming-echo .caption { color: inherit; }
 
+.echo.silent {
+  border-color: var(--line);
+  color: var(--muted);
+  background: var(--panel);
+}
+
+.campaign-totals, .dossier {
+  display: grid;
+  gap: 8px;
+}
+
+.campaign-echo {
+  display: grid;
+  gap: 4px;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  padding: 8px;
+  background: #f7f0de;
+}
+
+.campaign-echo strong { font-size: 1.05rem; }
+
+.dossier ol { padding: 0; margin: 0; list-style: none; }
+
+.dossier li {
+  display: grid;
+  gap: 6px;
+  padding: 10px 0;
+  border-top: 1px solid var(--rule);
+}
+
+.dossier-head { flex-wrap: wrap; align-items: baseline; }
+.dossier-briefing { font: 1.05rem / 1.45 var(--title); }
+.dossier-meta { font-size: 0.78rem; }
+
 .active-screen {
   position: relative;
   isolation: isolate;

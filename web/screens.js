@@ -347,10 +347,17 @@ function transmissionLog(state) {
     entries.length > 0 ? node("ol", null, ...entries) : node("p", null, "No transmissions recorded."));
 }
 
+function echoBanner(game, { label, message, silent = false }) {
+  return node("div", { class: silent ? "echo incoming-echo silent" : "echo incoming-echo" },
+    node("div", null, caption(label), node("strong", null, message)),
+    closeButton(game));
+}
+
 function debrief(game) {
   const { state } = game;
   const failed = state.phase === "failed";
-  const action = failed ? "Retry case" : state.phase === "complete" ? "Replay campaign" : `Next case · ${state.next_case}`;
+  const complete = state.phase === "complete";
+  const action = failed ? "Retry case" : complete ? "Declassify dossier" : `Next case · ${state.next_case}`;
   const paper = node("section", { class: "paper case-file debrief" },
     stamp(failed ? "COVER BLOWN" : "COMPLETED", !failed),
     caption(`DEBRIEF · CASE ${number(state.mission)}`), node("h1", null, state.name),
@@ -359,11 +366,59 @@ function debrief(game) {
       metric("Peak susp.", state.peak_suspicion)),
     node("p", { class: "result" }, state.result), worstIntercept(state.transmissions), transmissionLog(state));
   return node("div", { class: "screen" }, paper,
-    node("div", { class: "echo incoming-echo" },
-      node("div", null, caption("INCOMING · SENDER UNKNOWN"), node("strong", null, "H E L L O")),
-      closeButton(game)),
+    echoBanner(game, complete
+      ? { label: "CH 7.215 MHz · SIGNAL MONITOR", message: "NO CARRIER", silent: true }
+      : { label: "INCOMING · SENDER UNKNOWN", message: "H E L L O" }),
     game.status ? status(game.status) : null,
     readyButton(game, action));
+}
+
+function finale(game) {
+  const { state } = game;
+  const { campaign, dossier } = state;
+  const partner = state.role === "handler" ? "agent" : "handler";
+  const partnerReady = state.ready.includes(partner) ? `${CALLSIGNS[partner]} is ready to replay.` : "";
+  const topWord = campaign.most_jammed
+    ? node("div", { class: "campaign-echo" },
+      caption("MOST JAMMED WORD"),
+      node("div", { class: "split" },
+        node("strong", null, campaign.most_jammed.word),
+        caption(`${campaign.most_jammed.count} ${campaign.most_jammed.count === 1 ? "intercept" : "intercepts"}`)))
+    : node("div", { class: "campaign-echo" },
+      caption("MOST JAMMED WORD"),
+      node("p", null, "None · clean channel"));
+  const cases = dossier.map((entry) => node("li", null,
+    node("div", { class: "split dossier-head" },
+      caption(`CASE ${number(entry.mission)} · ${entry.name}`),
+      caption(entry.objective)),
+    node("p", { class: "dossier-briefing" }, entry.briefing),
+    entry.rounds != null
+      ? node("p", { class: "caption dossier-meta" },
+        `${entry.rounds} ${entry.rounds === 1 ? "round" : "rounds"} · ${entry.signal}% signal · peak susp. ${entry.peak_suspicion}`)
+      : null));
+  const paper = node("section", { class: "paper case-file finale" },
+    stamp("DECLASSIFIED", true),
+    caption("CAMPAIGN DOSSIER · KESSEL 1974"),
+    node("h1", null, "Case Closed"),
+    node("p", { class: "result" },
+      "The counter-cipher recording ran once from the embassy roof and took ECHO off the air. The courier's file is closed, and every briefing from the operation is now declassified for Magpie and Wren."),
+    node("section", { class: "campaign-totals" },
+      node("h2", { class: "caption" }, "Campaign totals"),
+      node("dl", { class: "debrief-details" },
+        metric("Signal", `${campaign.signal}%`),
+        metric("Rounds", campaign.rounds),
+        metric("Retries", campaign.retries),
+        metric("Messages", campaign.transmissions),
+        metric("Intercepts", campaign.intercepts),
+        metric("Peak susp.", campaign.peak_suspicion)),
+      topWord),
+    node("section", { class: "dossier" },
+      node("h2", { class: "caption" }, "Full operation log"),
+      node("ol", null, ...cases)));
+  return node("div", { class: "screen" }, station(), paper,
+    echoBanner(game, { label: "CH 7.215 MHz · ECHO SILENCED", message: "TRANSMISSION ENDED", silent: true }),
+    game.status || partnerReady ? status(game.status || partnerReady) : null,
+    readyButton(game, "Replay campaign"));
 }
 
 export function renderScreen(game) {
@@ -371,5 +426,6 @@ export function renderScreen(game) {
   if (!phase || phase === "lobby") return lobby(game);
   if (phase === "briefing") return briefing(game);
   if (phase === "active") return active(game);
+  if (phase === "finale") return finale(game);
   return debrief(game);
 }

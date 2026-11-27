@@ -588,6 +588,12 @@ button.key:not(:disabled) {
 
 .finale-addendum .caption { color: var(--red); }
 
+.finale-nav {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 8px;
+}
+
 .active-screen {
   position: relative;
   isolation: isolate;

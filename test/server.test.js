@@ -204,6 +204,20 @@ test("players can create, play, reconnect to, and close a room over /ws", { time
   assert.match(code, /^[A-HJ-NP-Z2-9]{5}$/);
   assert.equal((await handler.receive("state")).phase, "lobby");
 
+  const qr = await fetch(`${base}/api/room-qr?code=${code.toLowerCase()}`);
+  assert.equal(qr.status, 200);
+  assert.ok(qr.headers.get("content-type").startsWith("image/svg+xml"));
+  assert.match(await qr.text(), /<svg[\s>]/);
+  const qrHead = await fetch(`${base}/api/room-qr?code=${code}`, { method: "HEAD" });
+  assert.equal(qrHead.status, 200);
+  assert.equal(await qrHead.text(), "");
+  const qrPost = await fetch(`${base}/api/room-qr?code=${code}`, { method: "POST" });
+  assert.equal(qrPost.status, 405);
+  assert.equal(qrPost.headers.get("allow"), "GET, HEAD");
+  assert.equal((await fetch(`${base}/api/room-qr?code=INVALID`)).status, 400);
+  const missingCode = `${code[0] === "A" ? "B" : "A"}${code.slice(1)}`;
+  assert.equal((await fetch(`${base}/api/room-qr?code=${missingCode}`)).status, 404);
+
   const agent = await connect();
   agent.send("join", { code: code.toLowerCase() });
   const { token } = await agent.receive("joined");

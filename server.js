@@ -5,6 +5,7 @@ import { createServer } from "node:http";
 import { pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
 import { WebSocket, WebSocketServer } from "ws";
+import { qrcode } from "qrcode-generator";
 import { Room } from "./operation.js";
 import { createClearanceRouter } from "./apps/clearance/clearance.js";
 
@@ -57,13 +58,44 @@ function embedTags(request) {
   }).join("\n  ");
 }
 
-function createRequestHandler(clearanceRouter) {
+function createRequestHandler(clearanceRouter, multiplayer) {
   return async function servePage(request, response) {
     let url;
     try {
       url = new URL(request.url, `http://${request.headers.host ?? "localhost"}`);
     } catch {
       response.writeHead(400).end();
+      return;
+    }
+
+    if (url.pathname === "/api/room-qr") {
+      if (!["GET", "HEAD"].includes(request.method)) {
+        response.writeHead(405, { Allow: "GET, HEAD" }).end();
+        return;
+      }
+      const code = url.searchParams.get("code")?.trim().toUpperCase();
+      if (!code || [...code].length !== 5 || [...code].some((character) => !CODE_ALPHABET.includes(character))) {
+        response.writeHead(400).end();
+        return;
+      }
+      if (!multiplayer.rooms.has(code)) {
+        response.writeHead(404).end();
+        return;
+      }
+
+      const scheme = request.headers["x-forwarded-proto"] === "https" || request.headers["x-forwarded-for"]
+        ? "https" : "http";
+      const joinUrl = new URL("/", `${scheme}://${request.headers.host ?? "localhost"}`);
+      joinUrl.searchParams.set("join", code);
+      const qr = qrcode(0, "M");
+      qr.addData(joinUrl.href);
+      qr.make();
+      const svg = qr.createSvgTag(5, 2);
+      response.writeHead(200, {
+        "Content-Type": "image/svg+xml; charset=utf-8",
+        "Cache-Control": "no-store",
+      });
+      response.end(request.method === "HEAD" ? undefined : svg);
       return;
     }
 
@@ -258,7 +290,7 @@ export function createGameServer(nowOrOptions = () => performance.now()) {
   const now = options.now ?? (() => performance.now());
   const multiplayer = new Multiplayer(now);
   const clearanceRouter = createClearanceRouter(options.clearance);
-  const server = createServer(createRequestHandler(clearanceRouter));
+  const server = createServer(createRequestHandler(clearanceRouter, multiplayer));
   const sockets = new WebSocketServer({ noServer: true, maxPayload: 2048 });
   const responsive = new WeakSet();
   sockets.on("connection", (socket) => {

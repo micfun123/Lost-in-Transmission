@@ -72,7 +72,12 @@ function lobby(game) {
       node("div", { class: "room-code" },
         node("strong", null, game.state.code),
         button(game.copied ? "Copied" : "Copy", "copy", { style: game.copied ? "primary" : "" })),
-      node("p", null, "Share this code with Wren to open the case file."),
+      node("div", { class: "room-qr" },
+        node("img", {
+          src: `/api/room-qr?code=${encodeURIComponent(game.state.code)}`,
+          alt: `QR code to join room ${game.state.code}`,
+        }),
+        node("p", null, "Scan with your phone camera to join as Wren, or enter the room code.")),
       status(game.status || "Waiting for Wren to connect."));
     return node("div", { class: "screen" }, station(), paper,
       button("Close room", "confirm-leave", { disabled: !game.online }));
@@ -87,7 +92,7 @@ function lobby(game) {
   const join = node("button", { type: "submit", id: "join-room" }, "Join room · Wren");
   join.disabled = !game.online || game.code.length !== 5;
   paper.append(
-    node("p", null, "Magpie reads the map. Wren works the street. Orders and reports go over the radio."),
+    node("p", null, "Magpie reads the map. Wren works the street. Orders and reports go over the radio. Scan a room QR code or enter its code to join."),
     button("Create room · Magpie", "create", { style: "primary", disabled: !game.online }),
     node("form", { id: "join-form", class: "join-form" }, input, join),
     button("How to play", "tutorial"),

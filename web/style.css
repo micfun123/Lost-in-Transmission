@@ -217,6 +217,19 @@ button.key:not(:disabled) {
 
 .room-code button { min-width: 74px; }
 
+.room-qr {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.room-qr img {
+  width: min(36vw, 128px);
+  aspect-ratio: 1;
+  flex: none;
+  background: white;
+}
+
 .briefing-details, .debrief-details {
   display: grid;
   gap: 12px;

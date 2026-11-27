@@ -537,6 +537,42 @@ dialog h2 { font: 2rem / 1.2 var(--title); }
 dialog p { margin: 8px 0 14px; }
 dialog button { flex: 1; }
 
+.mission-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 38px;
+  padding: 6px 10px;
+  border-left: 3px solid var(--amber);
+  text-align: left;
+  text-transform: none;
+}
+
+.mission-objective {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mission-file {
+  flex: none;
+  color: var(--amber);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+}
+
+.briefing-dialog { width: min(100% - 32px, 380px); }
+
+.briefing-dialog-body {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.briefing-dialog .stamp { justify-self: end; }
+.briefing-dialog blockquote { font: 1.25rem / 1.4 var(--title); }
+
 /* How-to-play tutorial. Animations loop every 4s; the resting state is the finished scene. */
 .tutorial { width: min(100% - 32px, 380px); }
 .tutorial section { display: grid; gap: 12px; align-content: start; min-height: 330px; margin-block: 8px 14px; }

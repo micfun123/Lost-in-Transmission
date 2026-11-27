@@ -104,16 +104,24 @@ function metric(label, value) {
   return node("div", null, node("dt", null, label), node("dd", null, String(value)));
 }
 
+function caseFileContent(state, headingTag = "h1", headingId) {
+  return [
+    stamp("CONFIDENTIAL"),
+    caption(`CASE FILE ${number(state.mission)}`),
+    node(headingTag, headingId ? { id: headingId } : null, state.name),
+    node("blockquote", null, `“${state.briefing}”`),
+    node("dl", { class: "briefing-details" },
+      metric("Objective", state.objective), metric("Rounds", state.round_limit),
+      metric("Guards", "1, on patrol"), metric("Interference", state.interference)),
+  ];
+}
+
 function briefing(game) {
   const { state } = game;
   const handler = state.role === "handler";
   const partner = handler ? "agent" : "handler";
   const paper = node("section", { class: "paper case-file" },
-    stamp("CONFIDENTIAL"), caption(`CASE FILE ${number(state.mission)}`), node("h1", null, state.name),
-    node("blockquote", null, `“${state.briefing}”`),
-    node("dl", { class: "briefing-details" },
-      metric("Objective", state.objective), metric("Rounds", state.round_limit),
-      metric("Guards", "1, on patrol"), metric("Interference", state.interference)),
+    ...caseFileContent(state),
     node("p", null, handler
       ? "You are MAGPIE, the handler. You see the map. You do not see Wren."
       : "You are WREN, the agent. You see the street around you. Magpie has the map."),
@@ -122,6 +130,10 @@ function briefing(game) {
   const partnerStatus = `${CALLSIGNS[partner]} is on the channel${state.ready.includes(partner) ? " and ready" : ""}.`;
   return node("div", { class: "screen" }, station(), paper,
     roomFooter(game, game.status || partnerStatus), readyButton(game, "Ready · Open channel"));
+}
+
+export function renderBriefingModal(state) {
+  return caseFileContent(state, "h2", "briefing-dialog-heading");
 }
 
 function readyButton(game, text) {
@@ -266,6 +278,17 @@ function agentControls(game) {
   ];
 }
 
+function missionStrip(state) {
+  return node("button", {
+    type: "button",
+    class: "mission-strip",
+    "data-action": "briefing",
+    "aria-label": `Open case file: ${state.objective}`,
+  },
+  node("span", { class: "mission-objective" }, state.objective),
+  node("span", { class: "mission-file" }, "Case file"));
+}
+
 function active(game) {
   const { state } = game;
   let body;
@@ -275,9 +298,12 @@ function active(game) {
       ? node("div", { class: "map-and-legend" }, map(state), mapLegend(state))
       : node("div", { class: "report-map" }, map(state));
     const intercepted = state.incoming?.tiles.includes(REDACTED);
-    body = [mapArea, incoming(state.incoming),
+    body = [
+      ...(handler ? [missionStrip(state)] : []),
+      mapArea, incoming(state.incoming),
       echo(intercepted ? "▓ ░ · · intercept detected" : "· · · ▓ ░ · · listening"),
-      composer(game, handler ? "NEW ORDER" : "FIELD REPORT")];
+      composer(game, handler ? "NEW ORDER" : "FIELD REPORT"),
+    ];
   } else {
     body = [map(state), ...agentControls(game)];
   }

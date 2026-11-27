@@ -1,5 +1,6 @@
 // Browser client: talks to the server over /ws, handles input, and redraws on every change.
 import { MESSAGE_LIMIT, REDACTED } from "./radio.js";
+import { interferenceIntensity, StaticNoise } from "./interference.js";
 import { renderBriefingModal, renderScreen } from "./screens.js";
 
 const SESSION_KEY = "lost-in-transmission";
@@ -74,6 +75,7 @@ class Game {
     this.session = readSession();
     this.state = null;
     this.stateAt = 0;
+    this.staticNoise = null;
     this.socket = null;
     this.resuming = false;
     this.notice = "";
@@ -269,6 +271,10 @@ class Game {
       this.copyCode();
       return;
     }
+    if (action === "static") {
+      this.toggleStatic();
+      return;
+    }
     if (!this.online) return;
     if (action === "confirm-leave") {
       this.dialog.returnValue = "";
@@ -335,6 +341,18 @@ class Game {
     return Math.max(0, this.state.seconds - (performance.now() - this.stateAt) / 1000);
   }
 
+  async toggleStatic() {
+    try {
+      if (!this.staticNoise) this.staticNoise = new StaticNoise();
+      await this.staticNoise.setEnabled(!this.staticNoise.enabled);
+      this.notice = "";
+    } catch (error) {
+      console.error("Unable to toggle radio static", error);
+      this.notice = "Radio static could not start. Check your browser audio settings.";
+    }
+    this.render();
+  }
+
   updateTimer() {
     const timer = document.getElementById("timer");
     if (!timer) return;
@@ -349,6 +367,10 @@ class Game {
     const inGame = this.root.contains(focused);
     const selection = inGame && focused instanceof HTMLInputElement ? focused.selectionStart : null;
     this.root.replaceChildren(renderScreen(this));
+    this.staticNoise?.update(
+      this.state?.phase === "active",
+      interferenceIntensity(this.state?.interference),
+    );
     if (inGame) {
       let replacement;
       if (focused.id) {

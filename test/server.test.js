@@ -153,6 +153,7 @@ test("gates / until clearance passes, while preserving link preview tags and sta
 
   const assets = [
     ["/game.js", "text/javascript"], ["/screens.js", "text/javascript"],
+    ["/interference.js", "text/javascript"],
     ["/radio.js", "text/javascript"], ["/style.css", "text/css"],
     ["/logo.jpg", "image/jpeg"], ["/favicon.png", "image/png"], ["/apple-touch-icon.png", "image/png"],
     ["/assets/fonts/SpecialElite-Regular.ttf", "font/ttf"],

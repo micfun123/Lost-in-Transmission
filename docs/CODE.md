@@ -210,14 +210,14 @@ Holds the client's state:
 
 ## `web/screens.js`
 
-Turns the `Game` object into page elements. It only reads `game`; it never changes it or talks to the server. Everything is built with [`node()`](../web/screens.js#L16), which creates elements and adds text as plain text. No `innerHTML` is used anywhere, so text from the server can't inject HTML or scripts.
+Turns the `Game` object into page elements. It only reads `game`; it never changes it or talks to the server. Everything is built with [`node()`](../web/screens.js#L17), which creates elements and adds text as plain text. No `innerHTML` is used anywhere, so text from the server can't inject HTML or scripts.
 
 ### Small building blocks
 
 | Function | Builds |
 |---|---|
-| [`node(tag, attributes, ...children)`](../web/screens.js#L16) | Any element. Empty (`null`/`undefined`) children are skipped. |
-| [`button(text, action, options)`](../web/screens.js#L25) | A button with `data-action`, and optionally `data-value`, a CSS class, `disabled`, and an `aria-label`. This `data-action` is what `Game.command` receives. |
+| [`node(tag, attributes, ...children)`](../web/screens.js#L17) | Any element. Empty (`null`/`undefined`) children are skipped. |
+| [`button(text, action, options)`](../web/screens.js#L26) | A button with `data-action`, and optionally `data-value`, a CSS class, `disabled`, and an `aria-label`. This `data-action` is what `Game.command` receives. |
 | `caption`, `status`, `number`, `stamp`, `metric` | A small caption, a status line (`role="status"`, so screen readers announce it), a two-digit number (`01`), the rubber-stamp label, and a label/value pair. |
 | `station`, `closeButton`, `roomFooter`, `readyButton`, `keyButton` | The "THE BUREAU" header line, the × close button, the status + close row, the Ready button (shows "Waiting for partner" once pressed), and the decrypt key button (`×1` / `×0`). |
 
@@ -225,26 +225,28 @@ Turns the `Game` object into page elements. It only reads `game`; it never chang
 
 | Function | Screen |
 |---|---|
-| [`renderScreen(game)`](../web/screens.js#L323) | **The only export.** Picks a screen from `state.phase`: no state or `lobby` → `lobby`, `briefing`, `active`, otherwise `debrief`. |
-| [`lobby(game)`](../web/screens.js#L62) | Before joining: create, room code field, join, and how to play. After creating a room: the code, QR code, Copy, waiting status, and Close room. |
-| [`briefing(game)`](../web/screens.js#L98) | The case file: name, briefing text, objective, rounds, guards, interference, your role, your partner's status, and Ready. |
-| [`active(game)`](../web/screens.js#L260) | A running case. Magpie, and Wren while writing a report, get the map, incoming message, ECHO line and message composer. Wren while moving gets the map and `agentControls`. |
-| [`debrief(game)`](../web/screens.js#L304) | Outcome stamp, signal / rounds / peak suspicion, the result sentence, the worst intercept, the transmission log, and Ready labelled *Next case*, *Retry case* or *Replay campaign*. Also shows a "H E L L O" message from an unknown sender, as flavour. |
+| [`renderScreen(game)`](../web/screens.js#L343) | **The only export.** Picks a screen from `state.phase`: no state or `lobby` → `lobby`, `briefing`, `active`, otherwise `debrief`. |
+| [`lobby(game)`](../web/screens.js#L68) | Before joining: create, room code field, join, and how to play. After creating a room: the code, QR code, Copy, waiting status, and Close room. |
+| [`briefing(game)`](../web/screens.js#L109) | The case file: name, briefing text, objective, rounds, guards, interference, your role, your partner's status, and Ready. |
+| [`active(game)`](../web/screens.js#L277) | A running case. Magpie, and Wren while writing a report, get the map, incoming message, ECHO line and message composer. Wren while moving gets the map and `agentControls`. The screen also shows interference grain and an opt-in static audio control. |
+| [`debrief(game)`](../web/screens.js#L324) | Outcome stamp, signal / rounds / peak suspicion, the result sentence, the worst intercept, the transmission log, and Ready labelled *Next case*, *Retry case* or *Replay campaign*. Also shows a "H E L L O" message from an unknown sender, as flavour. |
 
 ### Pieces of the play screens
 
 | Function | Builds |
 |---|---|
-| [`header(state)`](../web/screens.js#L124) | Role, case, round, call sign, the `#timer` element (filled in by `updateTimer`), and the suspicion meter. |
-| [`map(state)`](../web/screens.js#L143) | The grid, at whatever size the level is. It sets `--cols` and `--rows` on the element, which the CSS uses for the layout and shape. [`MAP_TILES`](../web/screens.js#L4) turns letters into CSS classes and labels. The drop point shows the level's `drop_label` from the game update. It adds the patrol outline, the last-seen `?`, Wren `W` and guard `G`. Each square has a coordinate tooltip and label, such as `C4 · wall`. |
-| [`mapLegend(state)`](../web/screens.js#L169) | Magpie's legend (the package entry uses the level's `package` name) and the CCTV line ("Wren crossed C4 · Round 2"). |
-| [`tiles(words, highlighted)`](../web/screens.js#L182) | A row of word tiles. `[STATIC]` is drawn as `███` with an "Intercepted tile" label. Tiles listed in `highlighted` are shown in red (used by the worst intercept). |
-| [`incoming(packet)`](../web/screens.js#L191) | The paper card with the latest received message. |
-| [`echo(text)`](../web/screens.js#L199) | The "▒ ECHO" line, which changes when the incoming message has static. |
-| [`composer(game, heading)`](../web/screens.js#L208) | The 6 draft slots (tap a word to remove it), category tabs, the word bank, the key, and Transmit. Every part is disabled when it's not your turn. |
-| [`agentControls(game)`](../web/screens.js#L236) | Action points, bag, incoming message, the arrow pad, Take/Drop/Wait/Use, the decrypt key, and *End moves*. |
-| [`worstIntercept(entries)`](../web/screens.js#L278) / [`transmissionLog(state)`](../web/screens.js#L294) | The debrief's worst message (sent vs heard) and the full per-round log. |
+| [`header(state)`](../web/screens.js#L135) | Role, case, round, call sign, the `#timer` element (filled in by `updateTimer`), the opt-in static audio control, and the suspicion meter. |
+| [`map(state)`](../web/screens.js#L160) | The grid, at whatever size the level is. It sets `--cols` and `--rows` on the element, which the CSS uses for the layout and shape. [`MAP_TILES`](../web/screens.js#L5) turns letters into CSS classes and labels. The drop point shows the level's `drop_label` from the game update. It adds the patrol outline, the last-seen `?`, Wren `W` and guard `G`. Each square has a coordinate tooltip and label, such as `C4 · wall`. |
+| [`mapLegend(state)`](../web/screens.js#L186) | Magpie's legend (the package entry uses the level's `package` name) and the CCTV line ("Wren crossed C4 · Round 2"). |
+| [`tiles(words, highlighted)`](../web/screens.js#L199) | A row of word tiles. `[STATIC]` is drawn as `███` with an "Intercepted tile" label. Tiles listed in `highlighted` are shown in red (used by the worst intercept). |
+| [`incoming(packet)`](../web/screens.js#L208) | The paper card with the latest received message. |
+| [`echo(text)`](../web/screens.js#L216) | The "▒ ECHO" line, which changes when the incoming message has static. |
+| [`composer(game, heading)`](../web/screens.js#L225) | The 6 draft slots (tap a word to remove it), category tabs, the word bank, the key, and Transmit. Every part is disabled when it's not your turn. |
+| [`agentControls(game)`](../web/screens.js#L253) | Action points, bag, incoming message, the arrow pad, Take/Drop/Wait/Use, the decrypt key, and *End moves*. |
+| [`worstIntercept(entries)`](../web/screens.js#L298) / [`transmissionLog(state)`](../web/screens.js#L314) | The debrief's worst message (sent vs heard) and the full per-round log. |
 | `coordinate([x, y])`, `isAt(location, x, y)` | `[2, 3]` → `"C4"`, and a position check that copes with `null`. |
+
+[`interference.js`](../web/interference.js) maps the built-in risk labels to a shared intensity for the active-screen grain overlay and optional radio-static audio. Audio starts only when the player enables it.
 
 ## `web/style.css`
 

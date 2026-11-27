@@ -15,7 +15,7 @@ npm ci
 npm start
 ```
 
-Open the local game in two browser tabs or windows. One player creates a room as Magpie and shares the displayed code. The other joins as Wren using that code. [Local game](http://localhost:8000/)
+Open the local game in two browser tabs or windows. One player creates a room as Magpie and shares the displayed code or QR code. The other joins as Wren by entering the code or scanning the QR code with a phone camera. [Local game](http://localhost:8000/)
 
 Run `npm test` to check the game rules and multiplayer connection.
 
@@ -30,7 +30,7 @@ Run `npm test` to check the game rules and multiplayer connection.
 
 ## Play from separate devices
 
-Run `npm start -- --host 0.0.0.0` and open `http://SERVER_IP:8000` on each device on the same network. For internet play, put the Node server behind an HTTPS reverse proxy that forwards both the game page and the WebSocket upgrade at `/ws` on the same hostname. Rooms and ECHO's memory live in server memory for the session.
+Run `npm start -- --host 0.0.0.0` and open `http://SERVER_IP:8000` on each device on the same network. The QR code encodes the hostname Magpie used, so use an address Wren's device can reach rather than `localhost`. For internet play, put the Node server behind an HTTPS reverse proxy that forwards both the game page and the WebSocket upgrade at `/ws` on the same hostname. Rooms and ECHO's memory live in server memory for the session.
 
 ## Project layout
 

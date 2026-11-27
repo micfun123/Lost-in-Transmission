@@ -134,7 +134,7 @@ Serves the website, runs the WebSocket, and keeps track of rooms. It uses Node's
 | Function | Does |
 |---|---|
 | [`embedTags(request)`](../server.js#L31) | Builds the link-preview `<meta>` tags (Open Graph and Twitter) with full URLs. The URL uses `https` if the request came through the proxy (an `X-Forwarded-Proto: https` or `X-Forwarded-For` header), and `http` otherwise. Values are escaped for HTML. |
-| [`servePage(request, response)`](../server.js#L55) | The HTTP handler. Non-GET/HEAD requests get 405. Anything after `?` is ignored. `/` returns `INDEX` with `<!-- LINK_PREVIEW -->` replaced by the tags (with `no-cache`, so a deploy shows up straight away). Files in `ASSETS` are read from `web/`; images and fonts are cached for a day, scripts and CSS use `no-cache`. Everything else gets 404. |
+| [`servePage(request, response)`](../server.js#L55) | The HTTP handler. `/api/room-qr` returns an SVG QR code for an existing room, encoding the page URL with `?join=CODE`; other non-GET/HEAD requests get 405. `/` returns `INDEX` with `<!-- LINK_PREVIEW -->` replaced by the tags (with `no-cache`, so a deploy shows up straight away). Files in `ASSETS` are read from `web/`; images and fonts are cached for a day, scripts and CSS use `no-cache`. Everything else gets 404. |
 | [`sameOrigin(request)`](../server.js#L213) | Allows a WebSocket only if its `Origin` matches the page's host, so other websites can't connect to the game. A missing `Origin` is allowed; that's how the tests connect, since browsers always send one. |
 | [`createGameServer(now)`](../server.js#L223) | Builds and returns the HTTP server (not yet listening). Connects the `/ws` upgrade, which answers 404 for other paths and 403 for other websites. Starts two timers: a 20 s heartbeat that pings every socket and drops those that didn't answer the last ping, and the 500 ms room check. Both stop when the server closes. Tests call this with `listen(0)` to get a free port. |
 
@@ -179,7 +179,8 @@ Holds the client's state:
 - `stateAt`: when that snapshot arrived, used by the timer
 - `socket`, `session`, `resuming`
 - `notice`
-- `code`: the room code being typed
+- `code`: the room code being typed or prefilled from a `?join=CODE` link
+- `autoJoin`: whether a valid `?join=CODE` link should join as soon as the WebSocket opens
 - `copied`
 - `draft`: the message being written
 - `category`: the word tab being shown
@@ -198,7 +199,7 @@ Holds the client's state:
 | [`get composing`](../web/game.js#L116) / [`get moving`](../web/game.js#L121) | Whether it's this player's turn to write a message, or (Wren only) to move. |
 | [`get canDecrypt`](../web/game.js#L126) | The key is unused and the latest incoming message has static. |
 | [`get status`](../web/game.js#L130) | The status line, in priority order: connecting or reconnecting, "Partner disconnected", then the latest notice. |
-| [`connect()`](../web/game.js#L140) | Opens the WebSocket (`wss:` on HTTPS). When it opens, it sends `resume` if there's a saved session. When it closes, it freezes the timer display and tries again in 2 s, forever. |
+| [`connect()`](../web/game.js#L140) | Opens the WebSocket (`wss:` on HTTPS). When it opens, it sends `resume` if there's a saved session, or joins with a valid QR link code. When it closes, it freezes the timer display and tries again in 2 s, forever. |
 | [`send(message)`](../web/game.js#L161) | Sends JSON if connected. Returns whether it sent. |
 | [`receive(message)`](../web/game.js#L167) | Handles server messages. `joined` saves the session. `state` stores the snapshot, and on a new screen (phase, stage or case changed) it clears the draft and notice and scrolls to the top. `left`/`resume_failed` clear the session and go back to the lobby. `notice` shows the text. |
 | [`copyCode()`](../web/game.js#L208) | Copies the room code to the clipboard, shows *Copied* for 2 s, or shows a notice if copying fails. If the room changed while it was copying, it does nothing. |
@@ -225,7 +226,7 @@ Turns the `Game` object into page elements. It only reads `game`; it never chang
 | Function | Screen |
 |---|---|
 | [`renderScreen(game)`](../web/screens.js#L323) | **The only export.** Picks a screen from `state.phase`: no state or `lobby` → `lobby`, `briefing`, `active`, otherwise `debrief`. |
-| [`lobby(game)`](../web/screens.js#L62) | Before joining: create, room code field, join, and how to play. After creating a room: the code, Copy, waiting status, and Close room. |
+| [`lobby(game)`](../web/screens.js#L62) | Before joining: create, room code field, join, and how to play. After creating a room: the code, QR code, Copy, waiting status, and Close room. |
 | [`briefing(game)`](../web/screens.js#L98) | The case file: name, briefing text, objective, rounds, guards, interference, your role, your partner's status, and Ready. |
 | [`active(game)`](../web/screens.js#L260) | A running case. Magpie, and Wren while writing a report, get the map, incoming message, ECHO line and message composer. Wren while moving gets the map and `agentControls`. |
 | [`debrief(game)`](../web/screens.js#L304) | Outcome stamp, signal / rounds / peak suspicion, the result sentence, the worst intercept, the transmission log, and Ready labelled *Next case*, *Retry case* or *Replay campaign*. Also shows a "H E L L O" message from an unknown sender, as flavour. |

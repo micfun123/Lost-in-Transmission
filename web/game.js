@@ -4,6 +4,7 @@ import { renderScreen } from "./screens.js";
 
 const SESSION_KEY = "lost-in-transmission";
 const TUTORIAL_KEY = "lost-in-transmission-tutorial";
+const ROOM_CODE = /^[A-HJ-NP-Z2-9]{5}$/i;
 const TUTORIAL_TILES = { ".": "", "#": "wall", D: "package", E: "drop", W: "wren" };
 const MOVEMENT_KEYS = {
   ArrowUp: "up", w: "up", ArrowLeft: "left", a: "left",
@@ -75,7 +76,9 @@ class Game {
     this.socket = null;
     this.resuming = false;
     this.notice = "";
-    this.code = "";
+    const joinCode = new URLSearchParams(location.search).get("join") ?? "";
+    this.code = ROOM_CODE.test(joinCode) ? joinCode.toUpperCase() : "";
+    this.autoJoin = Boolean(this.code);
     this.copied = false;
     this.draft = [];
     this.category = "PLACE";
@@ -145,6 +148,7 @@ class Game {
       this.resuming = Boolean(this.session);
       this.notice = "";
       if (this.session) this.send({ type: "resume", ...this.session });
+      else if (this.autoJoin) this.command("join");
       this.render();
     });
     socket.addEventListener("message", (event) => this.receive(JSON.parse(event.data)));
@@ -170,6 +174,12 @@ class Game {
         this.session = { code: message.code, token: message.token };
         saveSession(this.session);
         this.copied = false;
+        if (this.autoJoin && message.code === this.code) {
+          this.autoJoin = false;
+          const url = new URL(location.href);
+          url.searchParams.delete("join");
+          history.replaceState(null, "", url);
+        }
         break;
       case "state": {
         const old = this.state;
@@ -197,6 +207,7 @@ class Game {
         this.dialog.close();
         this.render();
         window.scrollTo(0, 0);
+        if (message.type === "resume_failed" && this.autoJoin) this.command("join");
         break;
       case "notice":
         this.notice = message.text;

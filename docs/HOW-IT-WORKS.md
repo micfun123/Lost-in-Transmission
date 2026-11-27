@@ -20,7 +20,7 @@ For setup commands, see the [README](../README.md). For a function-by-function g
 
 ## The big picture
 
-Two players open the same website. One creates a room and becomes **Magpie**, the handler. The other joins with the room code and becomes **Wren**, the agent. They can't talk to each other in the game. Everything goes through a radio made of word tiles, and an enemy listener called **ECHO** turns repeated words into static.
+Two players open the same website. One creates a room and becomes **Magpie**, the handler. The other joins with the room code or scans its QR code and becomes **Wren**, the agent. They can't talk to each other in the game. Everything goes through a radio made of word tiles, and an enemy listener called **ECHO** turns repeated words into static.
 
 ```mermaid
 flowchart LR

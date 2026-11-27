@@ -1,0 +1,26 @@
+{
+  "name": "Safe Deposit",
+  "briefing": "The Dead Air recording ends with a voice from our own corridor: ECHO has a friend inside the bureau. That friend keeps a key at the red café. Take it to the bank and open their box.",
+  "package": "key",
+  "destination": "bank",
+  "decoy": "umbrella",
+  "risk": "Moderate",
+  "dropLabel": "BANK",
+  "echoChance": 0.25,
+  "echoMaxStatic": 2,
+  "rounds": 5,
+  "minutes": 6,
+  "grid": [
+    "S..#..",
+    ".#...#",
+    "...#X.",
+    "#.#..D",
+    "..T.#.",
+    ".#...E"
+  ],
+  "patrol": [[2, 1], [3, 1], [4, 1]],
+  "solution": {
+    "route": ["down", "down", "right", "down", "down", "right", "right", "up", "right", "right", "take", "down", "down", "drop"],
+    "peakSuspicion": 0
+  }
+}

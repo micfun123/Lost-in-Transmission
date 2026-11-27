@@ -53,15 +53,22 @@ flowchart LR
 
 ## The game rules
 
-### The three cases
+### The cases
 
 | # | Name | Package → destination | Decoy | Interference |
 |---|---|---|---|---|
 | 1 | Dead Drop | briefcase → fountain | umbrella | Light |
 | 2 | The Courier | envelope → station | paper | Moderate |
 | 3 | Dead Air | recording → park | paper | Heavy |
+| 4 | Safe Deposit | key → bank | umbrella | Moderate (6×6, 5 rounds, 6 minutes) |
+| 5 | Negatives | film → tower | paper | Heavy (10×8, 5 points a round) |
+| 6 | Missed Connection | passport → station | envelope | Light (7×9, 7 rounds, 7 minutes) |
+| 7 | The Bridge | cipher → bridge | paper | Severe (10×10, 5 points a round, 9 minutes) |
+| 8 | Last Transmission | recording → embassy | umbrella | Severe (9×9, up to 3 static tiles) |
 
-Each case is one JSON file in `levels/`, played in filename order. Its street map is written as lines of text, one per row. The built-in levels are 8×8, and a level can be anywhere from 5×5 to 12×12:
+The briefings tell one story: the ECHO recording from Dead Air points to a mole inside the bureau, and each case follows that thread until ECHO is silenced at the embassy.
+
+Each case is one JSON file in `levels/`, played in filename order. Its street map is written as lines of text, one per row. The first three cases are 8×8, later ones range from 6×6 to 10×10, and a level can be anywhere from 5×5 to 12×12:
 
 | Letter | Meaning |
 |---|---|

@@ -1,0 +1,29 @@
+{
+  "name": "Missed Connection",
+  "briefing": "The prints show the mole's face. It is our courier, the one who missed their connection. Their escape passport is waiting at the red café. Get it to the station before they do.",
+  "package": "passport",
+  "destination": "station",
+  "decoy": "envelope",
+  "risk": "Light",
+  "dropLabel": "STN",
+  "echoChance": 0.2,
+  "echoMaxStatic": 1,
+  "rounds": 7,
+  "minutes": 7,
+  "grid": [
+    "..D.#..",
+    ".#..#.#",
+    ".#.##..",
+    "...#..#",
+    "#.#..X.",
+    "..#.#..",
+    ".##...#",
+    "T..E#..",
+    "S.#...."
+  ],
+  "patrol": [[3, 4], [4, 4], [4, 3], [5, 3]],
+  "solution": {
+    "route": ["up", "up", "up", "right", "up", "up", "right", "up", "up", "up", "take", "down", "down", "down", "left", "down", "down", "left", "down", "down", "right", "right", "right", "drop"],
+    "peakSuspicion": 0
+  }
+}

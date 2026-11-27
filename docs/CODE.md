@@ -31,7 +31,7 @@ The radio vocabulary, loaded by both the browser and the server.
 
 | Export | Meaning |
 |---|---|
-| `WORD_GROUPS` | 7 categories (ACTION, DIRECTION, PLACE, COLOUR, ITEM, NUMBER, REPORT) of 6 words each. The browser shows these as tabs. The server builds its allowed-word list from them, so adding a word here is enough to make it sendable. |
+| `WORD_GROUPS` | 7 categories (ACTION, DIRECTION, PLACE, COLOUR, ITEM, NUMBER, REPORT) of 6 words each (PLACE has 8 and ITEM 9, for the later cases). The browser shows these as tabs. The server builds its allowed-word list from them, so adding a word here is enough to make it sendable. |
 | `MESSAGE_LIMIT` | 6. The most tiles in one message. |
 | `REDACTED` | `"[STATIC]"`. What a jammed tile is replaced with in what the receiver hears. The browser draws it as `███`. |
 | `CALLSIGNS` | `{ handler: "MAGPIE", agent: "WREN" }`. Its keys also set the list of roles (`ROLES` in `operation.js`). |

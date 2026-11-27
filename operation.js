@@ -233,6 +233,34 @@ export class Room {
     return [true, ""];
   }
 
+  // Dev helper: plays every level's solution to drop a newly paired room straight into the finale.
+  skipToFinale() {
+    if (!this.paired || this.phase !== "briefing") return false;
+    const savedTrack = this.track;
+    this.track = () => {};
+    try {
+      for (let i = 0; i < MISSIONS.length; i += 1) {
+        this.command("handler", { type: "ready" });
+        this.command("agent", { type: "ready" });
+        this.command("handler", { type: "radio", tiles: ["GO", "NORTH"] });
+        for (const step of this.mission.solution.route) {
+          if (this.points === 0) {
+            this.command("agent", { type: "end_moves" });
+            this.command("agent", { type: "radio", tiles: ["YES", "CLEAR"] });
+            this.command("handler", { type: "radio", tiles: ["GO", "EAST"] });
+          }
+          if (step === "take" || step === "drop") this.command("agent", { type: step });
+          else this.command("agent", { type: "move", direction: step });
+        }
+        this.command("handler", { type: "ready" });
+        this.command("agent", { type: "ready" });
+      }
+    } finally {
+      this.track = savedTrack;
+    }
+    return this.phase === "finale";
+  }
+
   expireMission() {
     if (this.phase !== "active" || !this.paired || this.now() < this.deadline) return false;
     this.finish("failed", "Time ran out. The drop went cold.");

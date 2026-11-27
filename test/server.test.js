@@ -257,8 +257,61 @@ test("players can create, play, reconnect to, and close a room over /ws", { time
   assert.equal((await resumed.receive("left")).text, "");
 });
 
-async function startServer(t) {
-  const server = createGameServer();
+test("startAtFinale skips paired rooms straight to the campaign finale and allows replay", { timeout: 10_000 }, async (t) => {
+  const base = await startServer(t, { startAtFinale: true });
+  const url = base.replace("http:", "ws:") + "/ws";
+  const signal = AbortSignal.timeout(8_000);
+  const sockets = new Set();
+  t.after(() => {
+    for (const socket of sockets) socket.terminate();
+  });
+  async function connect() {
+    const socket = new WebSocket(url, { origin: base });
+    sockets.add(socket);
+    socket.once("close", () => sockets.delete(socket));
+    const messages = on(socket, "message", { signal });
+    await once(socket, "open", { signal });
+    return {
+      send(type, extra = {}) {
+        socket.send(JSON.stringify({ type, ...extra }));
+      },
+      async receive(type, condition = () => true) {
+        while (true) {
+          const { value, done } = await messages.next();
+          if (done) throw new Error(`Missing ${type} message`);
+          const message = JSON.parse(value[0].toString());
+          if (message.type === type && condition(message)) return message;
+        }
+      },
+    };
+  }
+
+  const handler = await connect();
+  handler.send("create");
+  const { code } = await handler.receive("joined");
+  assert.equal((await handler.receive("state")).phase, "lobby");
+
+  const agent = await connect();
+  agent.send("join", { code });
+  await agent.receive("joined");
+  const agentFinale = await agent.receive("state");
+  const handlerFinale = await handler.receive("state");
+  for (const state of [agentFinale, handlerFinale]) {
+    assert.equal(state.phase, "finale");
+    assert.equal(state.dossier.length, 8);
+    assert.ok(state.campaign.rounds > 0);
+    assert.ok(state.campaign.transmissions > 0);
+    assert.ok(state.dossier.every((entry) => entry.rounds >= 1));
+  }
+
+  handler.send("ready");
+  agent.send("ready");
+  const replay = await agent.receive("state", (state) => state.phase === "briefing");
+  assert.equal(replay.mission, 1);
+});
+
+async function startServer(t, options) {
+  const server = createGameServer(options);
   server.listen(0, "127.0.0.1");
   await once(server, "listening");
   t.after(() => { server.close(); });

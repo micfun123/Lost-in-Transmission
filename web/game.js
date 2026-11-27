@@ -1,7 +1,7 @@
 // Browser client: talks to the server over /ws, handles input, and redraws on every change.
 import { MESSAGE_LIMIT, REDACTED } from "./radio.js";
 import { interferenceIntensity, StaticNoise } from "./interference.js";
-import { renderScreen } from "./screens.js";
+import { renderBriefingModal, renderScreen } from "./screens.js";
 
 const SESSION_KEY = "lost-in-transmission";
 const TUTORIAL_KEY = "lost-in-transmission-tutorial";
@@ -68,9 +68,10 @@ function setupTutorial(dialog) {
 const openTutorial = setupTutorial(document.getElementById("tutorial"));
 
 class Game {
-  constructor(root, dialog) {
+  constructor(root, dialog, briefingDialog) {
     this.root = root;
     this.dialog = dialog;
+    this.briefingDialog = briefingDialog;
     this.session = readSession();
     this.state = null;
     this.stateAt = 0;
@@ -102,6 +103,13 @@ class Game {
     });
     dialog.addEventListener("close", () => {
       if (dialog.returnValue === "leave") this.command("leave");
+    });
+    briefingDialog.addEventListener("click", (event) => {
+      if (event.target !== briefingDialog) return;
+      const rect = briefingDialog.getBoundingClientRect();
+      const inside = event.clientX >= rect.left && event.clientX <= rect.right &&
+        event.clientY >= rect.top && event.clientY <= rect.bottom;
+      if (!inside) briefingDialog.close();
     });
     document.addEventListener("keydown", (event) => this.onKey(event));
 
@@ -191,6 +199,7 @@ class Game {
           this.notice = "";
           this.category = message.stage === "report" ? "REPORT" : "PLACE";
         }
+        if (message.phase !== "active") this.briefingDialog.close();
         this.resuming = false;
         this.state = message;
         this.stateAt = performance.now();
@@ -207,6 +216,7 @@ class Game {
         this.notice = message.text ?? "";
         this.draft = [];
         this.dialog.close();
+        this.briefingDialog.close();
         this.render();
         window.scrollTo(0, 0);
         if (message.type === "resume_failed" && this.autoJoin) this.command("join");
@@ -216,6 +226,12 @@ class Game {
         this.render();
         break;
     }
+  }
+
+  openBriefing() {
+    const content = this.briefingDialog.querySelector("#briefing-dialog-content");
+    content.replaceChildren(...renderBriefingModal(this.state));
+    this.briefingDialog.showModal();
   }
 
   async copyCode() {
@@ -245,6 +261,10 @@ class Game {
     }
     if (action === "tutorial") {
       openTutorial();
+      return;
+    }
+    if (action === "briefing" && this.state?.role === "handler" && this.state.phase === "active") {
+      this.openBriefing();
       return;
     }
     if (action === "copy" && this.state) {
@@ -366,7 +386,11 @@ class Game {
   }
 }
 
-new Game(document.getElementById("game"), document.getElementById("leave-dialog"));
+new Game(
+  document.getElementById("game"),
+  document.getElementById("leave-dialog"),
+  document.getElementById("briefing-dialog"),
+);
 try {
   if (!localStorage.getItem(TUTORIAL_KEY)) openTutorial();
 } catch {

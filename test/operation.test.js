@@ -94,10 +94,10 @@ test("pauses the mission clock on loss of either player and resumes the remainin
   const token = room.tokens.get("agent");
   room.disconnect("agent");
   now = 700_000;
-  assert.equal(room.snapshot("handler").seconds, 540);
+  assert.equal(room.snapshot("handler").seconds, 840);
   assert.equal(room.expireMission(), false);
   assert.equal(room.connect("agent", {}), token);
-  now += 539_999;
+  now += 839_999;
   assert.equal(room.expireMission(), false);
   now += 1;
   assert.equal(room.expireMission(), true);
@@ -169,7 +169,7 @@ test("ECHO jams by chance, caps static per message, and fades between cases", ()
 
 test("levels can override time, rounds, action points and map size", () => {
   const level = MISSIONS[0];
-  assert.deepEqual([level.minutes, level.rounds, level.actionPoints], [10, 8, 4]);
+  assert.deepEqual([level.minutes, level.rounds, level.actionPoints], [15, 8, 4]);
   const saved = { ...level };
   try {
     Object.assign(level, { minutes: 2, rounds: 3, actionPoints: 6 });

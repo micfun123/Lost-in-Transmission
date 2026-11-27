@@ -9,7 +9,7 @@
   "echoChance": 0.2,
   "echoMaxStatic": 1,
   "rounds": 7,
-  "minutes": 7,
+  "minutes": 10,
   "grid": [
     "..D.#..",
     ".#..#.#",

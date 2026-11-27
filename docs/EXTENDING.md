@@ -67,7 +67,7 @@ Copy an existing level and edit it. This is a working 9th level, `levels/09-nigh
 | `solution.route` | One way to beat the level: the moves (`up`, `down`, `left`, `right`) and actions (`take`, `drop`, `use`, `wait`) from `S` to the package, `take`, then on to `E` and `drop`. The test plays it; players never see it. |
 | `echoChance` *(optional)* | How fast ECHO learns to jam a word: the chance per earlier use, from 0 to 1. The built-in levels use 0.2 (Light), 0.25 (Moderate), 0.3 (Heavy) and 0.35 (Severe). Defaults to 0.25. See [ECHO settings](#echo-settings). |
 | `echoMaxStatic` *(optional)* | The most static tiles in one message. 0 turns ECHO off for the level. The built-in levels use 1 to 3. Defaults to 2. |
-| `minutes`, `rounds`, `actionPoints` *(optional)* | Time limit, rounds, and Wren's points per round. Default 10, 8 and 4. |
+| `minutes`, `rounds`, `actionPoints` *(optional)* | Time limit, rounds, and Wren's points per round. Default 15, 8 and 4. |
 | `solution.peakSuspicion` | The suspicion that route ends with. The test checks this, so a change to the map or guard that makes the level harder gets noticed. |
 
 JSON can't contain comments. If you want notes about a level, add a `"notes"` field: the game ignores fields it doesn't use.

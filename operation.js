@@ -8,7 +8,7 @@ const WORDS = new Set(Object.values(WORD_GROUPS).flat());
 const DIRECTIONS = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
 export const OUTCOMES = new Set(["cleared", "failed", "complete"]);
 // Settings a level file may leave out.
-const LEVEL_DEFAULTS = { minutes: 10, rounds: 8, actionPoints: 4, echoChance: 0.25, echoMaxStatic: 2 };
+const LEVEL_DEFAULTS = { minutes: 15, rounds: 8, actionPoints: 4, echoChance: 0.25, echoMaxStatic: 2 };
 const JAM_CHANCE_LIMIT = 0.6;
 
 const LEVELS = new URL("./levels/", import.meta.url);

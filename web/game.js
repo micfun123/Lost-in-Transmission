@@ -86,6 +86,9 @@ class Game {
     this.draft = [];
     this.category = "PLACE";
     this.finaleStep = 0;
+    this.finaleAnimate = "";
+    this.echoPowerDown = false;
+    this.countFrame = null;
 
     root.addEventListener("click", (event) => {
       const button = event.target.closest("button[data-action]");
@@ -199,7 +202,11 @@ class Game {
           this.draft = [];
           this.notice = "";
           this.category = message.stage === "report" ? "REPORT" : "PLACE";
-          if (old?.phase !== message.phase) this.finaleStep = 0;
+          if (old?.phase !== message.phase) {
+            this.finaleStep = 0;
+            this.finaleAnimate = message.phase === "finale" ? "enter" : "";
+            this.echoPowerDown = message.phase === "complete";
+          }
         }
         if (message.phase !== "active") this.briefingDialog.close();
         this.resuming = false;
@@ -218,6 +225,8 @@ class Game {
         this.notice = message.text ?? "";
         this.draft = [];
         this.finaleStep = 0;
+        this.finaleAnimate = "";
+        this.echoPowerDown = false;
         this.dialog.close();
         this.briefingDialog.close();
         this.render();
@@ -281,6 +290,7 @@ class Game {
     if (action === "finale-next" && this.state?.phase === "finale") {
       if (this.finaleStep < finaleStepCount(this.state) - 1) {
         this.finaleStep += 1;
+        this.finaleAnimate = "forward";
         this.render();
         window.scrollTo(0, 0);
       }
@@ -289,6 +299,7 @@ class Game {
     if (action === "finale-back" && this.state?.phase === "finale") {
       if (this.finaleStep > 0) {
         this.finaleStep -= 1;
+        this.finaleAnimate = "back";
         this.render();
         window.scrollTo(0, 0);
       }
@@ -388,15 +399,45 @@ class Game {
     if (timer.textContent !== text) timer.textContent = text;
   }
 
+  animateTotals() {
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches) return;
+    const counters = [...this.root.querySelectorAll("[data-count]")].map((element) => ({
+      element,
+      target: Number(element.dataset.count),
+      suffix: element.dataset.suffix ?? "",
+    })).filter(({ target }) => Number.isFinite(target) && target > 0);
+    if (!counters.length) return;
+    const start = performance.now();
+    const duration = 460;
+    const tick = (now) => {
+      const progress = Math.min(1, (now - start) / duration);
+      const eased = 1 - (1 - progress) ** 3;
+      for (const { element, target, suffix } of counters) {
+        element.textContent = `${Math.round(target * eased)}${suffix}`;
+      }
+      if (progress < 1) this.countFrame = requestAnimationFrame(tick);
+      else this.countFrame = null;
+    };
+    this.countFrame = requestAnimationFrame(tick);
+  }
+
   render() {
     const focused = document.activeElement;
     const inGame = this.root.contains(focused);
     const selection = inGame && focused instanceof HTMLInputElement ? focused.selectionStart : null;
+    const shouldCountUp = Boolean(this.finaleAnimate) && this.state?.phase === "finale" && this.finaleStep === 0;
+    if (this.countFrame !== null) {
+      cancelAnimationFrame(this.countFrame);
+      this.countFrame = null;
+    }
     this.root.replaceChildren(renderScreen(this));
+    this.finaleAnimate = "";
+    this.echoPowerDown = false;
     this.staticNoise?.update(
       this.state?.phase === "active",
       interferenceIntensity(this.state?.interference),
     );
+    if (shouldCountUp) this.animateTotals();
     if (inGame) {
       let replacement;
       if (focused.id) {

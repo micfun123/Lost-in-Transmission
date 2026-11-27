@@ -102,8 +102,9 @@ function lobby(game) {
   return node("div", { class: "screen" }, station(), paper);
 }
 
-function metric(label, value) {
-  return node("div", null, node("dt", null, label), node("dd", null, String(value)));
+function metric(label, value, count) {
+  const attrs = count ? { "data-count": String(count.target), ...(count.suffix ? { "data-suffix": count.suffix } : {}) } : null;
+  return node("div", null, node("dt", null, label), node("dd", attrs, String(value)));
 }
 
 function caseFileContent(state, headingTag = "h1", headingId) {
@@ -347,8 +348,11 @@ function transmissionLog(state) {
     entries.length > 0 ? node("ol", null, ...entries) : node("p", null, "No transmissions recorded."));
 }
 
-function echoBanner(game, { label, message, silent = false }) {
-  return node("div", { class: silent ? "echo incoming-echo silent" : "echo incoming-echo" },
+function echoBanner(game, { label, message, silent = false, powerDown = false }) {
+  const classes = ["echo", "incoming-echo"];
+  if (silent) classes.push("silent");
+  if (powerDown) classes.push("power-down");
+  return node("div", { class: classes.join(" ") },
     node("div", null, caption(label), node("strong", null, message)),
     closeButton(game));
 }
@@ -367,7 +371,7 @@ function debrief(game) {
     node("p", { class: "result" }, state.result), worstIntercept(state.transmissions), transmissionLog(state));
   return node("div", { class: "screen" }, paper,
     echoBanner(game, complete
-      ? { label: "CH 7.215 MHz · SIGNAL MONITOR", message: "NO CARRIER", silent: true }
+      ? { label: "CH 7.215 MHz · SIGNAL MONITOR", message: "NO CARRIER", silent: true, powerDown: Boolean(game.echoPowerDown) }
       : { label: "INCOMING · SENDER UNKNOWN", message: "H E L L O" }),
     game.status ? status(game.status) : null,
     readyButton(game, action));
@@ -384,6 +388,8 @@ function finale(game) {
   const step = Math.max(0, Math.min(totalSteps - 1, game.finaleStep ?? 0));
   const partner = state.role === "handler" ? "agent" : "handler";
   const partnerReady = state.ready.includes(partner) ? `${CALLSIGNS[partner]} is ready to replay.` : "";
+  const anim = game.finaleAnimate;
+  const paperClass = anim ? `paper case-file finale finale-animated finale-${anim}` : "paper case-file finale";
 
   let paper;
   let controls;
@@ -398,7 +404,7 @@ function finale(game) {
         caption("MOST JAMMED WORD"),
         node("p", null, "None · clean channel"));
     const nextLabel = dossier.length > 0 ? `Next · Case ${number(dossier[0].mission)}` : "Next · Addendum";
-    paper = node("section", { class: "paper case-file finale" },
+    paper = node("section", { class: paperClass },
       stamp("DECLASSIFIED", true),
       caption(`CAMPAIGN DOSSIER · PAGE 1 / ${totalSteps}`),
       node("h1", null, "Case Closed"),
@@ -407,12 +413,12 @@ function finale(game) {
       node("section", { class: "campaign-totals" },
         node("h2", { class: "caption" }, "Campaign totals"),
         node("dl", { class: "debrief-details" },
-          metric("Signal", `${campaign.signal}%`),
-          metric("Rounds", campaign.rounds),
-          metric("Retries", campaign.retries),
-          metric("Messages", campaign.transmissions),
-          metric("Intercepts", campaign.intercepts),
-          metric("Peak susp.", campaign.peak_suspicion)),
+          metric("Signal", `${campaign.signal}%`, { target: campaign.signal, suffix: "%" }),
+          metric("Rounds", campaign.rounds, { target: campaign.rounds }),
+          metric("Retries", campaign.retries, { target: campaign.retries }),
+          metric("Messages", campaign.transmissions, { target: campaign.transmissions }),
+          metric("Intercepts", campaign.intercepts, { target: campaign.intercepts }),
+          metric("Peak susp.", campaign.peak_suspicion, { target: campaign.peak_suspicion })),
         topWord));
     controls = button(nextLabel, "finale-next", { style: "primary" });
   } else if (step <= dossier.length) {
@@ -426,7 +432,7 @@ function finale(game) {
         metric("Peak susp.", entry.peak_suspicion),
       );
     }
-    paper = node("section", { class: "paper case-file finale" },
+    paper = node("section", { class: paperClass },
       stamp("DECLASSIFIED", true),
       caption(`CASE FILE ${number(entry.mission)} OF ${number(dossier.length)} · PAGE ${step + 1} / ${totalSteps}`),
       node("h1", null, entry.name),
@@ -436,7 +442,7 @@ function finale(game) {
       button("Back", "finale-back"),
       button(nextEntry ? `Next · Case ${number(nextEntry.mission)}` : "Next · Addendum", "finale-next", { style: "primary" }));
   } else {
-    paper = node("section", { class: "paper case-file finale" },
+    paper = node("section", { class: paperClass },
       stamp("STATION PO1"),
       caption(`POSTSCRIPT · PAGE ${totalSteps} / ${totalSteps}`),
       node("h1", null, "Next Directive"),

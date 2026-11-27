@@ -50,16 +50,3 @@ docker compose up -d --build
 
 The container serves the browser game and the `/ws` WebSocket on http://127.0.0.1:8620.
 
-## Deploying
-
-The game is hosted at https://transmission.michaelrbparker.com on the Hetzner server:
-
-- The repo is cloned to `/root/lost-in-transmission` and runs with Docker Compose.
-- The host nginx proxies the domain and WebSocket upgrades to port 8620 (`deploy/transmission.michaelrbparker.com.conf`).
-- Cloudflare handles HTTPS.
-
-Every push to `main` builds and deploys automatically through GitHub Actions. To deploy by hand:
-
-```sh
-ssh hetzner /root/lost-in-transmission/deploy/deploy.sh
-```

@@ -10,6 +10,11 @@ COPY server.js operation.js ./
 COPY levels ./levels
 COPY web ./web
 COPY apps ./apps
+COPY scripts ./scripts
+
+# Owned by node so the analytics volume is writable.
+RUN mkdir /data && chown node:node /data
+ENV ANALYTICS_FILE=/data/analytics.jsonl
 
 USER node
 EXPOSE 8000

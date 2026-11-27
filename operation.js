@@ -125,6 +125,10 @@ export class Room {
     this.missionIndex = 0;
     this.words = new Map();
     this.emptySince = null;
+    this.createdAt = now();
+    this.casesCleared = 0;
+    // The server swaps this for its analytics writer.
+    this.track = () => {};
     this.resetCampaign();
     this.prepareCase();
     this.phase = "lobby";
@@ -262,6 +266,13 @@ export class Room {
         peakSuspicion: this.peakSuspicion,
       });
     }
+    if (phase !== "failed") this.casesCleared += 1;
+    // The deadline moves on with every pause, so this is time actually played.
+    const playedMs = this.mission.minutes * 60_000 - (this.deadline - this.finishedAt);
+    this.track({
+      event: "case", room: this.code, case: this.missionIndex + 1, name: this.mission.name,
+      outcome: phase, seconds: Math.round(playedMs / 1000), rounds: this.round,
+    });
   }
 
   command(role, data) {

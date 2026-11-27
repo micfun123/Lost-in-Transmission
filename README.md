@@ -33,11 +33,27 @@ After each case, the debrief shows your signal score, the worst intercept and th
 - **Form PO1-00.** Before reaching the lobby, players fill in a period-style entry clearance form: tune a radio dial and pick the genuine documents from the fakes.
 - **Phone-first case-file design.** It has portrait screens, an animated how-to-play tutorial and QR code joining.
 
-## Built with
+## Design choices
 
-The frontend is plain HTML, CSS and JavaScript, and the backend is a Node.js server with WebSockets. All the game rules run on the server, and each player is sent only what their role is allowed to see, so nobody can cheat by editing their browser. GitHub Actions runs the tests on every push and deploys automatically when a change is merged to `main`.
+### The game
 
-We started in Godot, moved to Pygame in the browser, and rewrote the whole game in JavaScript the same day when the Python runtime took about 90 seconds to load.
+- **Word tiles instead of free chat.** Keeping messages to six tiles from a fixed vocabulary makes communication the puzzle. It also lets ECHO count exactly which words you rely on, and lets the server check every message.
+- **Each player sees something different.** Magpie can see everything but can't move, and Wren can move but only sees a 3×3 patch of the map. Neither can win alone, so information has to flow both ways: orders go out, and field reports come back.
+- **ECHO punishes habits, not players.** Repeating yourself is the natural thing to do over a radio, so that's what ECHO listens for. At first ECHO always jammed learned words, which locked players out of their own vocabulary. We changed it to jam by chance, and it can only turn up to half of a message into static. It also forgets half of what it learned between cases, so pressure builds without the next case being ruined before it starts.
+- **One decrypt key per case.** If static hits the one word that matters, each player has one way to recover it. That makes the key a decision worth thinking about rather than an undo button.
+- **Every step counts.** The guard moves with each action point Wren spends, so wasted moves are a real risk and Magpie's routes need to be efficient.
+- **Difficulty goes up and down.** The eight cases change the map size (6×6 to 10×10), rounds, action points, time and ECHO strength. A hard case is followed by a breather instead of a steady climb.
+- **A 1974 case-file look.** The paper-and-ink style, the redacted tiles and the Form PO1-00 entry clearance form at the door all keep players inside the setting before the game even starts.
+
+### The tech
+
+- **The server owns the game.** All the rules run on the Node.js server, and after every action each player is sent only what their role is allowed to see. Wren's browser never receives the full map, so editing the page can't reveal it.
+- **JavaScript instead of Python.** We started in Godot, then moved to Pygame running in the browser, but players were waiting about 90 seconds for the Python runtime to load. We rewrote the whole game in plain JavaScript the same day, and now it opens instantly.
+- **No framework and no build step.** The frontend is plain HTML, CSS and JavaScript, and the server has two dependencies (`ws` and `qrcode-generator`). That keeps the page light on phones and the code easy to follow.
+- **Built for phones in the same room.** The screens are portrait, joining works by QR code so nobody types room codes, and there's an animated tutorial on first visit.
+- **Dropped connections pause the game.** Phones lock and lose signal, so the clock stops when either player drops out, and reopening the tab puts them back in their role.
+- **Nothing is saved to disk.** Rooms and ECHO's memory live in the server's memory. That keeps the server simple, but a restart or deploy ends any games in progress.
+- **Levels are data that's checked.** Each case is a JSON file, and the server checks all of them when it starts. A broken level stops the server rather than crashing a game halfway through, and because GitHub runs the tests (including a playthrough of every level's solution) before deploying, a broken level can't reach the live site.
 
 ## Run it yourself
 

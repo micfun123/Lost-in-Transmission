@@ -220,4 +220,21 @@ test("finale screen steps through totals, each case one by one, and Station PO1 
     campaign: { ...room.snapshot("agent").campaign, intercepts: 0, signal: 100, most_jammed: null },
   };
   assert.ok(textContent(renderScreen(gameView(cleanState, { finaleStep: 0 }))).includes("None · clean channel"));
+
+  // One-shot animation hooks apply on transitions and stay off on static re-renders.
+  const animatedPage = renderScreen(gameView(room.snapshot("agent"), { finaleStep: 0, finaleAnimate: "forward" }));
+  assert.equal(findAll(animatedPage, (node) => node.attrs?.class?.includes("finale-animated finale-forward")).length, 1);
+  assert.equal(findAll(animatedPage, (node) => node.attrs?.["data-count"] != null).length, 6);
+
+  const staticPage = renderScreen(gameView(room.snapshot("agent"), { finaleStep: 1, finaleAnimate: "" }));
+  assert.equal(findAll(staticPage, (node) => node.attrs?.class?.includes("finale-animated")).length, 0);
+
+  const completeRoom = activeRoom();
+  completeRoom.missionIndex = MISSIONS.length - 1;
+  completeRoom.prepareCase();
+  completeRoom.command("handler", { type: "ready" });
+  completeRoom.command("agent", { type: "ready" });
+  clearCurrentMission(completeRoom);
+  const powerDownDebrief = renderScreen(gameView(completeRoom.snapshot("agent"), { echoPowerDown: true }));
+  assert.equal(findAll(powerDownDebrief, (node) => node.attrs?.class?.includes("echo incoming-echo silent power-down")).length, 1);
 });

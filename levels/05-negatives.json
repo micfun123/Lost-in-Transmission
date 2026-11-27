@@ -1,0 +1,27 @@
+{
+  "name": "Negatives",
+  "briefing": "The box at the bank held a roll of film: photographs of our own codebooks. A friendly printer at the red café has developed it. Carry the film to the tower so the bureau can see who took them.",
+  "package": "film",
+  "destination": "tower",
+  "decoy": "paper",
+  "risk": "Heavy",
+  "dropLabel": "TWR",
+  "echoChance": 0.3,
+  "echoMaxStatic": 2,
+  "actionPoints": 5,
+  "grid": [
+    "S...#.....",
+    ".##.#.##.#",
+    "...#...#..",
+    "#.#..#...E",
+    "..#.##.#.#",
+    ".#...X..T.",
+    "...#.##.#.",
+    "D#......#."
+  ],
+  "patrol": [[6, 2], [6, 3], [6, 4], [6, 5]],
+  "solution": {
+    "route": ["down", "down", "right", "down", "down", "left", "down", "down", "down", "take", "up", "right", "right", "up", "right", "right", "right", "right", "right", "right", "up", "up", "right", "drop"],
+    "peakSuspicion": 0
+  }
+}

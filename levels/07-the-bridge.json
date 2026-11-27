@@ -1,0 +1,30 @@
+{
+  "name": "The Bridge",
+  "briefing": "With no passport, the courier is trapped in Kessel and wants a deal: ECHO's cipher for safe passage. They left it at the red café. Bring it to the bridge. Trust nobody on the way.",
+  "package": "cipher",
+  "destination": "bridge",
+  "decoy": "paper",
+  "risk": "Severe",
+  "dropLabel": "BRDG",
+  "echoChance": 0.35,
+  "echoMaxStatic": 2,
+  "minutes": 9,
+  "actionPoints": 5,
+  "grid": [
+    "S.#....#.D",
+    "..#.##.#..",
+    ".....#...#",
+    "##.#.#.#..",
+    "...#...#.#",
+    ".#.###.#..",
+    ".#...X...#",
+    ".####.##..",
+    "......#...",
+    "#.T.#...E#"
+  ],
+  "patrol": [[6, 1], [6, 2], [6, 3], [6, 4], [6, 5], [6, 6]],
+  "solution": {
+    "route": ["down", "up", "down", "down", "right", "right", "right", "up", "up", "right", "right", "right", "down", "down", "right", "right", "up", "up", "right", "take", "down", "left", "down", "down", "down", "down", "down", "down", "down", "down", "drop"],
+    "peakSuspicion": 0
+  }
+}

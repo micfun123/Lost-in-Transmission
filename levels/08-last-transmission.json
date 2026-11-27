@@ -1,0 +1,27 @@
+{
+  "name": "Last Transmission",
+  "briefing": "The cipher works both ways. Our technicians have pressed it onto a recording, one message ECHO cannot learn, and left it at the red café. ECHO broadcasts from the embassy roof. Play it there and end the transmission.",
+  "package": "recording",
+  "destination": "embassy",
+  "decoy": "umbrella",
+  "risk": "Severe",
+  "dropLabel": "EMB",
+  "echoChance": 0.35,
+  "echoMaxStatic": 3,
+  "grid": [
+    "S..#....D",
+    ".#...##..",
+    "...#...#.",
+    "#.#..#...",
+    "..#.##.#.",
+    ".#...X.#.",
+    "...#.#...",
+    ".##...#.#",
+    "..E.#...."
+  ],
+  "patrol": [[4, 1], [4, 2], [4, 3], [3, 3], [3, 4]],
+  "solution": {
+    "route": ["right", "right", "down", "right", "right", "up", "right", "right", "right", "right", "take", "down", "down", "down", "left", "left", "down", "down", "left", "left", "down", "down", "left", "down", "left", "drop"],
+    "peakSuspicion": 0
+  }
+}

@@ -24,7 +24,7 @@ Each level is one JSON file in `levels/`. The game plays them in **filename orde
 
 ### 1. Create the file
 
-Copy an existing level and edit it. This is a working 4th level, `levels/04-night-train.json`:
+Copy an existing level and edit it. This is a working 9th level, `levels/09-night-train.json`:
 
 ```json
 {
@@ -62,11 +62,11 @@ Copy an existing level and edit it. This is a working 4th level, `levels/04-nigh
 | `package`, `destination`, `decoy` | Lower-case nouns. They appear in the objective ("Key → bank"), the bag display, the map legend and the result text. **They must be words in `web/radio.js`** (here: `KEY`, `BANK`, `PAPER`), so players can say them over the radio. |
 | `risk` | Free text shown as "Interference" on the briefing. Make it match the ECHO settings below. |
 | `dropLabel` | The short label on the drop square on the map, at most about 4 letters (`FTN`, `STN`, `PARK`). |
-| `grid` | **5 to 12 rows, all the same length of 5 to 12 characters**, written top to bottom so the file looks like the map. The built-in levels are 8×8. On a phone, more than about 10 columns makes the tiles small. See [map letters](#map-letters). |
+| `grid` | **5 to 12 rows, all the same length of 5 to 12 characters**, written top to bottom so the file looks like the map. The built-in levels range from 6×6 to 10×10. On a phone, more than about 10 columns makes the tiles small. See [map letters](#map-letters). |
 | `patrol` | The guard's route as `[x, y]` squares. See [patrol rules](#patrol-rules). |
 | `solution.route` | One way to beat the level: the moves (`up`, `down`, `left`, `right`) and actions (`take`, `drop`, `use`, `wait`) from `S` to the package, `take`, then on to `E` and `drop`. The test plays it; players never see it. |
-| `echoChance` *(optional)* | How fast ECHO learns to jam a word: the chance per earlier use, from 0 to 1. The built-in levels use 0.2 (Light), 0.25 (Moderate) and 0.3 (Heavy). Defaults to 0.25. See [ECHO settings](#echo-settings). |
-| `echoMaxStatic` *(optional)* | The most static tiles in one message. 0 turns ECHO off for the level. The built-in levels use 1, 2, 2. Defaults to 2. |
+| `echoChance` *(optional)* | How fast ECHO learns to jam a word: the chance per earlier use, from 0 to 1. The built-in levels use 0.2 (Light), 0.25 (Moderate), 0.3 (Heavy) and 0.35 (Severe). Defaults to 0.25. See [ECHO settings](#echo-settings). |
+| `echoMaxStatic` *(optional)* | The most static tiles in one message. 0 turns ECHO off for the level. The built-in levels use 1 to 3. Defaults to 2. |
 | `minutes`, `rounds`, `actionPoints` *(optional)* | Time limit, rounds, and Wren's points per round. Default 10, 8 and 4. |
 | `solution.peakSuspicion` | The suspicion that route ends with. The test checks this, so a change to the map or guard that makes the level harder gets noticed. |
 
@@ -82,7 +82,7 @@ For every level file, the tests:
 The server runs the same check when it starts. **A bad level stops the server** instead of crashing a game halfway through:
 
 ```
-Error: levels/04-night-train.json: "patrol" square 2 must be next to square 1
+Error: levels/09-night-train.json: "patrol" square 2 must be next to square 1
 ```
 
 Because GitHub runs the tests before deploying, a broken level can't reach the live site.

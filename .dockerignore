@@ -9,3 +9,5 @@
 !web/**
 !apps/
 !apps/**
+!scripts/
+!scripts/**

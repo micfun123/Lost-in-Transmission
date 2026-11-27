@@ -43,11 +43,22 @@ function number(value) {
   return String(value).padStart(2, "0");
 }
 
-function station() {
+function soundButton(game) {
+  const on = game.audio.enabled;
+  const control = button(on ? "[SFX: ON]" : "[SFX: OFF]", "sound", {
+    style: on ? "lock-btn sound-btn is-on" : "lock-btn sound-btn",
+    label: on ? "Mute mission sound effects" : "Enable mission sound effects",
+  });
+  control.setAttribute("aria-pressed", String(on));
+  return control;
+}
+
+function station(game) {
   return node("header", { class: "station" },
     "THE BUREAU · KESSEL · 1974",
     node("span", { class: "station-meta" },
       caption("CH 7.215 MHz"),
+      soundButton(game),
       button("[LOCK]", "lock", { style: "lock-btn", label: "Lock station and re-run clearance captcha" })));
 }
 
@@ -79,7 +90,7 @@ function lobby(game) {
         }),
         node("p", null, "Scan with your phone camera to join as Wren, or enter the room code.")),
       status(game.status || "Waiting for Wren to connect."));
-    return node("div", { class: "screen" }, station(), paper,
+    return node("div", { class: "screen" }, station(game), paper,
       button("Close room", "confirm-leave", { disabled: !game.online }));
   }
 
@@ -97,7 +108,7 @@ function lobby(game) {
     node("form", { id: "join-form", class: "join-form" }, input, join),
     button("How to play", "tutorial"),
     status(game.status));
-  return node("div", { class: "screen" }, station(), paper);
+  return node("div", { class: "screen" }, station(game), paper);
 }
 
 function metric(label, value) {
@@ -120,7 +131,7 @@ function briefing(game) {
     node("p", null, handler ? "Partner: WREN, on the street." : "Partner: MAGPIE, on the radio."),
     node("p", { class: "caption" }, "No talking. Everything goes over the radio."));
   const partnerStatus = `${CALLSIGNS[partner]} is on the channel${state.ready.includes(partner) ? " and ready" : ""}.`;
-  return node("div", { class: "screen" }, station(), paper,
+  return node("div", { class: "screen" }, station(game), paper,
     roomFooter(game, game.status || partnerStatus), readyButton(game, "Ready · Open channel"));
 }
 
@@ -130,10 +141,13 @@ function readyButton(game, text) {
     { style: "primary", disabled: !game.available || ready });
 }
 
-function header(state) {
+function header(game) {
+  const { state } = game;
   return node("header", { class: "game-header" },
     node("div", { class: "header-row" }, caption(`${state.role.toUpperCase()} · CASE ${number(state.mission)}`),
-      node("span", null, `ROUND ${state.round} / ${state.round_limit}`)),
+      node("span", { class: "station-meta" },
+        node("span", null, `ROUND ${state.round} / ${state.round_limit}`),
+        soundButton(game))),
     node("div", { class: "header-row" }, node("h1", null, CALLSIGNS[state.role]),
       node("span", { id: "timer", class: "caption", "aria-label": "Time remaining" }),
       node("div", { class: "suspicion" }, caption("SUSPICION"),
@@ -281,7 +295,7 @@ function active(game) {
   } else {
     body = [map(state), ...agentControls(game)];
   }
-  return node("div", { class: "screen active-screen" }, header(state), ...body);
+  return node("div", { class: "screen active-screen" }, header(game), ...body);
 }
 
 function worstIntercept(entries) {
@@ -324,7 +338,7 @@ function debrief(game) {
   return node("div", { class: "screen" }, paper,
     node("div", { class: "echo incoming-echo" },
       node("div", null, caption("INCOMING · SENDER UNKNOWN"), node("strong", null, "H E L L O")),
-      closeButton(game)),
+      node("span", { class: "station-meta" }, soundButton(game), closeButton(game))),
     game.status ? status(game.status) : null,
     readyButton(game, action));
 }

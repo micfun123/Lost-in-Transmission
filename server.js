@@ -20,6 +20,7 @@ const INDEX = readFileSync(new URL("index.html", WEB_ROOT), "utf8");
 const CLEARANCE_PAGE_HTML = readFileSync(new URL("index.html", CLEARANCE_ROOT), "utf8");
 const ASSETS = new Map([
   ["/game.js", [new URL("game.js", WEB_ROOT), "text/javascript; charset=utf-8"]],
+  ["/audio.js", [new URL("audio.js", WEB_ROOT), "text/javascript; charset=utf-8"]],
   ["/screens.js", [new URL("screens.js", WEB_ROOT), "text/javascript; charset=utf-8"]],
   ["/radio.js", [new URL("radio.js", WEB_ROOT), "text/javascript; charset=utf-8"]],
   ["/style.css", [new URL("style.css", WEB_ROOT), "text/css; charset=utf-8"]],

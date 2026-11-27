@@ -109,6 +109,7 @@ button.key:not(:disabled) {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
   gap: 6px;
   padding-block: 10px 6px;
   color: var(--muted);
@@ -118,7 +119,7 @@ button.key:not(:disabled) {
 .station-meta {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .lock-btn {
@@ -135,6 +136,17 @@ button.key:not(:disabled) {
   border-color: #d94b34;
   color: #d94b34;
   background: rgb(217 75 52 / 0.1);
+}
+
+.sound-btn.is-on {
+  border-color: #2f6b45;
+  color: var(--signal);
+}
+
+.sound-btn:hover, .sound-btn:focus-visible {
+  border-color: var(--amber);
+  color: var(--amber);
+  background: rgb(242 165 65 / 0.1);
 }
 
 .paper {
@@ -260,7 +272,7 @@ button.key:not(:disabled) {
   font-size: 0.87rem;
 }
 
-.room-footer button, .incoming-echo button {
+.room-footer button, .incoming-echo button:not(.sound-btn) {
   min-width: 36px;
   min-height: 36px;
   padding: 0 4px;

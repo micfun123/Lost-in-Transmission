@@ -152,7 +152,7 @@ test("gates / until clearance passes, while preserving link preview tags and sta
   assert.ok((await relocked.text()).includes("FORM PO1-00"));
 
   const assets = [
-    ["/game.js", "text/javascript"], ["/screens.js", "text/javascript"],
+    ["/game.js", "text/javascript"], ["/audio.js", "text/javascript"], ["/screens.js", "text/javascript"],
     ["/radio.js", "text/javascript"], ["/style.css", "text/css"],
     ["/logo.jpg", "image/jpeg"], ["/favicon.png", "image/png"], ["/apple-touch-icon.png", "image/png"],
     ["/assets/fonts/SpecialElite-Regular.ttf", "font/ttf"],

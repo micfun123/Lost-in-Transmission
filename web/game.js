@@ -1,4 +1,5 @@
 // Browser client: talks to the server over /ws, handles input, and redraws on every change.
+import { MissionAudio } from "./audio.js";
 import { MESSAGE_LIMIT, REDACTED } from "./radio.js";
 import { renderScreen } from "./screens.js";
 
@@ -6,6 +7,7 @@ const SESSION_KEY = "lost-in-transmission";
 const TUTORIAL_KEY = "lost-in-transmission-tutorial";
 const ROOM_CODE = /^[A-HJ-NP-Z2-9]{5}$/i;
 const TUTORIAL_TILES = { ".": "", "#": "wall", D: "package", E: "drop", W: "wren" };
+const DIRECTION_DELTAS = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
 const MOVEMENT_KEYS = {
   ArrowUp: "up", w: "up", ArrowLeft: "left", a: "left",
   ArrowDown: "down", s: "down", ArrowRight: "right", d: "right",
@@ -82,6 +84,8 @@ class Game {
     this.copied = false;
     this.draft = [];
     this.category = "PLACE";
+    this.audio = new MissionAudio();
+    this.lastTimerSecond = null;
 
     root.addEventListener("click", (event) => {
       const button = event.target.closest("button[data-action]");
@@ -102,6 +106,7 @@ class Game {
       if (dialog.returnValue === "leave") this.command("leave");
     });
     document.addEventListener("keydown", (event) => this.onKey(event));
+    window.addEventListener("pagehide", () => this.audio.cancelPending());
 
     this.render();
     this.connect();
@@ -183,7 +188,11 @@ class Game {
         break;
       case "state": {
         const old = this.state;
+        const wasResuming = this.resuming;
         const newScreen = !old || old.phase !== message.phase || old.stage !== message.stage || old.mission !== message.mission;
+        if (!old || old.phase !== message.phase || old.mission !== message.mission) {
+          this.lastTimerSecond = null;
+        }
         if (newScreen) {
           this.draft = [];
           this.notice = "";
@@ -192,6 +201,7 @@ class Game {
         this.resuming = false;
         this.state = message;
         this.stateAt = performance.now();
+        this.audio.playTransition(old, message, { resuming: wasResuming });
         this.render();
         if (newScreen) window.scrollTo(0, 0);
         break;
@@ -202,6 +212,8 @@ class Game {
         saveSession(null);
         this.state = null;
         this.resuming = false;
+        this.lastTimerSecond = null;
+        this.audio.cancelPending();
         this.notice = message.text ?? "";
         this.draft = [];
         this.dialog.close();
@@ -211,6 +223,7 @@ class Game {
         break;
       case "notice":
         this.notice = message.text;
+        this.audio.playStamp("reject");
         this.render();
         break;
     }
@@ -235,6 +248,14 @@ class Game {
   }
 
   command(action, value) {
+    if (action === "sound") {
+      const next = !this.audio.enabled;
+      this.audio.setEnabled(next);
+      if (next) this.audio.playTileClick("add");
+      this.render();
+      return;
+    }
+    this.audio.ensureContext();
     if (action === "lock") {
       fetch("/api/clearance/reset", { method: "POST" })
         .then(() => location.reload())
@@ -257,25 +278,44 @@ class Game {
     }
     if (action === "category" || action === "tile" || action === "remove") {
       if (!this.composing) return;
-      if (action === "category") this.category = value;
-      if (action === "tile" && this.draft.length < MESSAGE_LIMIT) this.draft.push(value);
-      if (action === "remove") this.draft.splice(Number(value), 1);
+      if (action === "category") {
+        this.category = value;
+        this.audio.playTileClick("tab");
+      }
+      if (action === "tile" && this.draft.length < MESSAGE_LIMIT) {
+        this.draft.push(value);
+        this.audio.playTileClick("add");
+      }
+      if (action === "remove") {
+        this.draft.splice(Number(value), 1);
+        this.audio.playTileClick("remove");
+      }
       this.render();
       return;
     }
     let message = { type: action };
+    let transmittedCount = 0;
     if (action === "transmit") {
       if (!this.composing || !this.draft.length) return;
+      transmittedCount = this.draft.length;
       message = { type: "radio", tiles: this.draft };
     } else if (action === "join") {
       if (this.state || this.code.length !== 5) return;
       message.code = this.code;
     } else if (action === "move") {
       message.direction = value;
+      const delta = DIRECTION_DELTAS[value];
+      if (this.moving && this.state.points > 0 && delta) {
+        const target = this.state.grid[this.state.position[1] + delta[1]]?.[this.state.position[0] + delta[0]];
+        if (target === undefined || target === "#") this.audio.playWallBump();
+      }
     }
     if (this.send(message)) {
       this.notice = "";
-      if (action === "transmit") this.draft = [];
+      if (action === "transmit") {
+        this.audio.playTransmit(transmittedCount, this.state?.interference);
+        this.draft = [];
+      }
       this.render();
     }
   }
@@ -322,6 +362,14 @@ class Game {
     const minutes = String(Math.floor(seconds / 60)).padStart(2, "0");
     const text = `${minutes}:${String(seconds % 60).padStart(2, "0")}`;
     if (timer.textContent !== text) timer.textContent = text;
+    if (this.available && this.state?.phase === "active" && seconds !== this.lastTimerSecond) {
+      const previous = this.lastTimerSecond;
+      this.lastTimerSecond = seconds;
+      if (previous !== null && seconds < previous) {
+        if (seconds === 60) this.audio.playTimerWarning();
+        else if (seconds > 0 && seconds <= 30) this.audio.playTimerTick(seconds <= 10);
+      }
+    }
   }
 
   render() {

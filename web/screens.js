@@ -46,7 +46,7 @@ function number(value) {
 }
 
 function station() {
-  return node("header", { class: "station" },
+  return node("header", { class: "station-header" },
     "THE BUREAU · KESSEL · 1974",
     node("span", { class: "station-meta" },
       caption("CH 7.215 MHz"),

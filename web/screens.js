@@ -177,7 +177,7 @@ function map(state) {
 
 function mapLegend(state) {
   const labels = [
-    ["last-seen", "Last seen"], ["patrol", "Guard route"],
+    ["wall", "Walls (impassable)"], ["last-seen", "Last seen"], ["patrol", "Guard route"],
     ["package", `${state.package[0].toUpperCase()}${state.package.slice(1)}`], ["drop", "Drop point"],
   ];
   const sighting = state.last_seen;

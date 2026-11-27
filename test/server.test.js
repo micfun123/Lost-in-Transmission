@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
 import { on, once } from "node:events";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import test from "node:test";
 import { WebSocket } from "ws";
 import { COOKIE_NAME, LEGIT_CARDS } from "../apps/clearance/clearance.js";
@@ -308,6 +311,25 @@ test("startAtFinale skips paired rooms straight to the campaign finale and allow
   agent.send("ready");
   const replay = await agent.receive("state", (state) => state.phase === "briefing");
   assert.equal(replay.mission, 1);
+});
+
+test("/stats needs the password and summarises the analytics file", async (t) => {
+  const dir = await mkdtemp(join(tmpdir(), "lit-stats-"));
+  const analyticsFile = join(dir, "analytics.jsonl");
+  await writeFile(analyticsFile, `${JSON.stringify({ event: "room", paired: true, seconds: 600, cases_cleared: 2 })}\n`);
+  t.after(() => rm(dir, { recursive: true }));
+  assert.equal((await fetch(`${await startServer(t)}/stats`)).status, 404);
+
+  const base = await startServer(t, { analyticsFile, statsPassword: "correct horse" });
+  const login = (password) => ({ headers: { Authorization: `Basic ${btoa(`admin:${password}`)}` } });
+  const denied = await fetch(`${base}/stats`, login("wrong"));
+  assert.equal(denied.status, 401);
+  assert.match(denied.headers.get("www-authenticate"), /^Basic /);
+  assert.equal((await fetch(`${base}/stats`)).status, 401);
+
+  const allowed = await fetch(`${base}/stats`, login("correct horse"));
+  assert.equal(allowed.status, 200);
+  assert.match(await allowed.text(), /Games played: 1[\s\S]*2: 1 game/);
 });
 
 async function startServer(t, options) {

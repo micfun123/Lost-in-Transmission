@@ -542,6 +542,45 @@ button.key:not(:disabled) {
 .incoming-echo strong { display: block; font-size: 1.4rem; }
 .incoming-echo .caption { color: inherit; }
 
+.echo.silent {
+  border-color: var(--line);
+  color: var(--muted);
+  background: var(--panel);
+}
+
+.campaign-totals {
+  display: grid;
+  gap: 8px;
+}
+
+.campaign-echo {
+  display: grid;
+  gap: 4px;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  padding: 8px;
+  background: #f7f0de;
+}
+
+.campaign-echo strong { font-size: 1.05rem; }
+
+.finale-addendum {
+  display: grid;
+  gap: 5px;
+  padding: 10px;
+  border: 1px dashed var(--red);
+  border-radius: 4px;
+  background: #f7f0de;
+}
+
+.finale-addendum .caption { color: var(--red); }
+
+.finale-nav {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 8px;
+}
+
 .active-screen {
   position: relative;
   isolation: isolate;

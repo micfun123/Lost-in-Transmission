@@ -347,10 +347,17 @@ function transmissionLog(state) {
     entries.length > 0 ? node("ol", null, ...entries) : node("p", null, "No transmissions recorded."));
 }
 
+function echoBanner(game, { label, message, silent = false }) {
+  return node("div", { class: silent ? "echo incoming-echo silent" : "echo incoming-echo" },
+    node("div", null, caption(label), node("strong", null, message)),
+    closeButton(game));
+}
+
 function debrief(game) {
   const { state } = game;
   const failed = state.phase === "failed";
-  const action = failed ? "Retry case" : state.phase === "complete" ? "Replay campaign" : `Next case · ${state.next_case}`;
+  const complete = state.phase === "complete";
+  const action = failed ? "Retry case" : complete ? "Declassify dossier" : `Next case · ${state.next_case}`;
   const paper = node("section", { class: "paper case-file debrief" },
     stamp(failed ? "COVER BLOWN" : "COMPLETED", !failed),
     caption(`DEBRIEF · CASE ${number(state.mission)}`), node("h1", null, state.name),
@@ -359,11 +366,93 @@ function debrief(game) {
       metric("Peak susp.", state.peak_suspicion)),
     node("p", { class: "result" }, state.result), worstIntercept(state.transmissions), transmissionLog(state));
   return node("div", { class: "screen" }, paper,
-    node("div", { class: "echo incoming-echo" },
-      node("div", null, caption("INCOMING · SENDER UNKNOWN"), node("strong", null, "H E L L O")),
-      closeButton(game)),
+    echoBanner(game, complete
+      ? { label: "CH 7.215 MHz · SIGNAL MONITOR", message: "NO CARRIER", silent: true }
+      : { label: "INCOMING · SENDER UNKNOWN", message: "H E L L O" }),
     game.status ? status(game.status) : null,
     readyButton(game, action));
+}
+
+export function finaleStepCount(state) {
+  return (state?.dossier?.length ?? 0) + 2;
+}
+
+function finale(game) {
+  const { state } = game;
+  const { campaign, dossier } = state;
+  const totalSteps = finaleStepCount(state);
+  const step = Math.max(0, Math.min(totalSteps - 1, game.finaleStep ?? 0));
+  const partner = state.role === "handler" ? "agent" : "handler";
+  const partnerReady = state.ready.includes(partner) ? `${CALLSIGNS[partner]} is ready to replay.` : "";
+
+  let paper;
+  let controls;
+  if (step === 0) {
+    const topWord = campaign.most_jammed
+      ? node("div", { class: "campaign-echo" },
+        caption("MOST JAMMED WORD"),
+        node("div", { class: "split" },
+          node("strong", null, campaign.most_jammed.word),
+          caption(`${campaign.most_jammed.count} ${campaign.most_jammed.count === 1 ? "intercept" : "intercepts"}`)))
+      : node("div", { class: "campaign-echo" },
+        caption("MOST JAMMED WORD"),
+        node("p", null, "None · clean channel"));
+    const nextLabel = dossier.length > 0 ? `Next · Case ${number(dossier[0].mission)}` : "Next · Addendum";
+    paper = node("section", { class: "paper case-file finale" },
+      stamp("DECLASSIFIED", true),
+      caption(`CAMPAIGN DOSSIER · PAGE 1 / ${totalSteps}`),
+      node("h1", null, "Case Closed"),
+      node("p", { class: "result" },
+        "The counter-cipher recording ran once from the embassy roof and took ECHO off the air. The courier's file is closed, and every briefing from the operation is now declassified for Magpie and Wren."),
+      node("section", { class: "campaign-totals" },
+        node("h2", { class: "caption" }, "Campaign totals"),
+        node("dl", { class: "debrief-details" },
+          metric("Signal", `${campaign.signal}%`),
+          metric("Rounds", campaign.rounds),
+          metric("Retries", campaign.retries),
+          metric("Messages", campaign.transmissions),
+          metric("Intercepts", campaign.intercepts),
+          metric("Peak susp.", campaign.peak_suspicion)),
+        topWord));
+    controls = button(nextLabel, "finale-next", { style: "primary" });
+  } else if (step <= dossier.length) {
+    const entry = dossier[step - 1];
+    const nextEntry = dossier[step];
+    const details = [metric("Objective", entry.objective)];
+    if (entry.rounds != null) {
+      details.push(
+        metric("Signal", `${entry.signal}%`),
+        metric("Rounds", entry.rounds),
+        metric("Peak susp.", entry.peak_suspicion),
+      );
+    }
+    paper = node("section", { class: "paper case-file finale" },
+      stamp("DECLASSIFIED", true),
+      caption(`CASE FILE ${number(entry.mission)} OF ${number(dossier.length)} · PAGE ${step + 1} / ${totalSteps}`),
+      node("h1", null, entry.name),
+      node("blockquote", null, `“${entry.briefing}”`),
+      node("dl", { class: "briefing-details" }, ...details));
+    controls = node("div", { class: "finale-nav" },
+      button("Back", "finale-back"),
+      button(nextEntry ? `Next · Case ${number(nextEntry.mission)}` : "Next · Addendum", "finale-next", { style: "primary" }));
+  } else {
+    paper = node("section", { class: "paper case-file finale" },
+      stamp("STATION PO1"),
+      caption(`POSTSCRIPT · PAGE ${totalSteps} / ${totalSteps}`),
+      node("h1", null, "Next Directive"),
+      node("aside", { class: "finale-addendum" },
+        caption("ADDENDUM · STATION PO1"),
+        node("p", null,
+          "With ECHO silenced, Station PO1 has reassigned the bureau's spare demolition budget to blowing up Southampton. The field team left for SO14 at dawn and is currently stuck on the M27 near Junction 7.")));
+    controls = node("div", { class: "finale-nav" },
+      button("Back", "finale-back"),
+      readyButton(game, "Replay campaign"));
+  }
+
+  return node("div", { class: "screen" }, station(), paper,
+    echoBanner(game, { label: "CH 7.215 MHz · ECHO SILENCED", message: "TRANSMISSION ENDED", silent: true }),
+    game.status || partnerReady ? status(game.status || partnerReady) : null,
+    controls);
 }
 
 export function renderScreen(game) {
@@ -371,5 +460,6 @@ export function renderScreen(game) {
   if (!phase || phase === "lobby") return lobby(game);
   if (phase === "briefing") return briefing(game);
   if (phase === "active") return active(game);
+  if (phase === "finale") return finale(game);
   return debrief(game);
 }

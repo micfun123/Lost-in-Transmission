@@ -188,9 +188,10 @@ function analyticsWriter(file) {
 }
 
 class Multiplayer {
-  constructor(now, track = () => {}) {
+  constructor(now, track = () => {}, { startAtFinale = false } = {}) {
     this.now = now;
     this.track = track;
+    this.startAtFinale = startAtFinale;
     this.rooms = new Map();
   }
 
@@ -222,9 +223,11 @@ class Multiplayer {
   }
 
   join(client, room, role) {
+    const wasLobby = room.phase === "lobby";
     client.room = room;
     client.role = role;
     const token = room.connect(role, client);
+    if (this.startAtFinale && wasLobby && room.phase === "briefing") room.skipToFinale();
     this.send(client.socket, { type: "joined", code: room.code, token });
     this.publish(room);
   }
@@ -345,7 +348,9 @@ function sameOrigin(request) {
 export function createGameServer(nowOrOptions = () => performance.now()) {
   const options = typeof nowOrOptions === "function" ? { now: nowOrOptions } : (nowOrOptions ?? {});
   const now = options.now ?? (() => performance.now());
-  const multiplayer = new Multiplayer(now, analyticsWriter(options.analyticsFile));
+  const multiplayer = new Multiplayer(now, analyticsWriter(options.analyticsFile), {
+    startAtFinale: Boolean(options.startAtFinale),
+  });
   const clearanceRouter = createClearanceRouter(options.clearance);
   const server = createServer(createRequestHandler(clearanceRouter, multiplayer, options));
   const sockets = new WebSocketServer({ noServer: true, maxPayload: 2048 });
@@ -388,11 +393,12 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     options: {
       host: { type: "string", default: "127.0.0.1" },
       port: { type: "string", default: "8000" },
+      finale: { type: "boolean", default: false },
       help: { type: "boolean", short: "h" },
     },
   });
   if (values.help) {
-    console.log("Usage: node server.js [--host 127.0.0.1] [--port 8000]");
+    console.log("Usage: node server.js [--host 127.0.0.1] [--port 8000] [--finale]");
   } else {
     const port = Number(values.port);
     if (!/^\d+$/.test(values.port) || !Number.isInteger(port) || port > 65535) {
@@ -401,10 +407,12 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     const server = createGameServer({
       analyticsFile: process.env.ANALYTICS_FILE,
       statsPassword: process.env.STATS_PASSWORD,
+      startAtFinale: values.finale,
     });
     server.listen(port, values.host, () => {
       const hostname = values.host.includes(":") ? `[${values.host}]` : values.host;
       console.log(`Lost in Transmission listening at http://${hostname}:${server.address().port}`);
+      if (values.finale) console.log("Dev mode (--finale): paired rooms skip straight to the campaign finale.");
     });
   }
 }

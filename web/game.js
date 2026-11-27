@@ -1,7 +1,7 @@
 // Browser client: talks to the server over /ws, handles input, and redraws on every change.
 import { MESSAGE_LIMIT, REDACTED } from "./radio.js";
 import { interferenceIntensity, StaticNoise } from "./interference.js";
-import { renderBriefingModal, renderScreen } from "./screens.js";
+import { finaleStepCount, renderBriefingModal, renderScreen } from "./screens.js";
 
 const SESSION_KEY = "lost-in-transmission";
 const TUTORIAL_KEY = "lost-in-transmission-tutorial";
@@ -85,6 +85,7 @@ class Game {
     this.copied = false;
     this.draft = [];
     this.category = "PLACE";
+    this.finaleStep = 0;
 
     root.addEventListener("click", (event) => {
       const button = event.target.closest("button[data-action]");
@@ -198,6 +199,7 @@ class Game {
           this.draft = [];
           this.notice = "";
           this.category = message.stage === "report" ? "REPORT" : "PLACE";
+          if (old?.phase !== message.phase) this.finaleStep = 0;
         }
         if (message.phase !== "active") this.briefingDialog.close();
         this.resuming = false;
@@ -215,6 +217,7 @@ class Game {
         this.resuming = false;
         this.notice = message.text ?? "";
         this.draft = [];
+        this.finaleStep = 0;
         this.dialog.close();
         this.briefingDialog.close();
         this.render();
@@ -275,6 +278,22 @@ class Game {
       this.toggleStatic();
       return;
     }
+    if (action === "finale-next" && this.state?.phase === "finale") {
+      if (this.finaleStep < finaleStepCount(this.state) - 1) {
+        this.finaleStep += 1;
+        this.render();
+        window.scrollTo(0, 0);
+      }
+      return;
+    }
+    if (action === "finale-back" && this.state?.phase === "finale") {
+      if (this.finaleStep > 0) {
+        this.finaleStep -= 1;
+        this.render();
+        window.scrollTo(0, 0);
+      }
+      return;
+    }
     if (!this.online) return;
     if (action === "confirm-leave") {
       this.dialog.returnValue = "";
@@ -317,13 +336,20 @@ class Game {
       this.command("confirm-leave");
       return;
     }
+    if (this.state?.phase === "finale" && (event.key === "ArrowRight" || event.key === "ArrowLeft")) {
+      event.preventDefault();
+      this.command(event.key === "ArrowRight" ? "finale-next" : "finale-back");
+      return;
+    }
     if (key === "enter") {
       if (event.target.matches?.("button:focus-visible")) return;
       event.preventDefault();
       if (!this.state) document.getElementById("room-code")?.focus();
       else if (this.composing) this.command("transmit");
       else if (this.moving) this.command("end_moves");
-      else if (this.available && this.state.phase !== "active" && !this.state.ready.includes(this.state.role)) {
+      else if (this.state.phase === "finale" && this.finaleStep < finaleStepCount(this.state) - 1) {
+        this.command("finale-next");
+      } else if (this.available && this.state.phase !== "active" && !this.state.ready.includes(this.state.role)) {
         this.command("ready");
       }
       return;

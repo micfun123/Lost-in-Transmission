@@ -548,7 +548,7 @@ button.key:not(:disabled) {
   background: var(--panel);
 }
 
-.campaign-totals, .dossier {
+.campaign-totals {
   display: grid;
   gap: 8px;
 }
@@ -563,19 +563,6 @@ button.key:not(:disabled) {
 }
 
 .campaign-echo strong { font-size: 1.05rem; }
-
-.dossier ol { padding: 0; margin: 0; list-style: none; }
-
-.dossier li {
-  display: grid;
-  gap: 6px;
-  padding: 10px 0;
-  border-top: 1px solid var(--rule);
-}
-
-.dossier-head { flex-wrap: wrap; align-items: baseline; }
-.dossier-briefing { font: 1.05rem / 1.45 var(--title); }
-.dossier-meta { font-size: 0.78rem; }
 
 .finale-addendum {
   display: grid;

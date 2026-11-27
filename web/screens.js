@@ -373,12 +373,15 @@ function debrief(game) {
     readyButton(game, action));
 }
 
-export const FINALE_STEPS = 3;
+export function finaleStepCount(state) {
+  return (state?.dossier?.length ?? 0) + 2;
+}
 
 function finale(game) {
   const { state } = game;
   const { campaign, dossier } = state;
-  const step = Math.max(0, Math.min(FINALE_STEPS - 1, game.finaleStep ?? 0));
+  const totalSteps = finaleStepCount(state);
+  const step = Math.max(0, Math.min(totalSteps - 1, game.finaleStep ?? 0));
   const partner = state.role === "handler" ? "agent" : "handler";
   const partnerReady = state.ready.includes(partner) ? `${CALLSIGNS[partner]} is ready to replay.` : "";
 
@@ -394,9 +397,10 @@ function finale(game) {
       : node("div", { class: "campaign-echo" },
         caption("MOST JAMMED WORD"),
         node("p", null, "None · clean channel"));
+    const nextLabel = dossier.length > 0 ? `Next · Case ${number(dossier[0].mission)}` : "Next · Addendum";
     paper = node("section", { class: "paper case-file finale" },
       stamp("DECLASSIFIED", true),
-      caption(`CAMPAIGN DOSSIER · PAGE 1 / ${FINALE_STEPS}`),
+      caption(`CAMPAIGN DOSSIER · PAGE 1 / ${totalSteps}`),
       node("h1", null, "Case Closed"),
       node("p", { class: "result" },
         "The counter-cipher recording ran once from the embassy roof and took ECHO off the air. The courier's file is closed, and every briefing from the operation is now declassified for Magpie and Wren."),
@@ -410,30 +414,31 @@ function finale(game) {
           metric("Intercepts", campaign.intercepts),
           metric("Peak susp.", campaign.peak_suspicion)),
         topWord));
-    controls = button("Next · Operation log", "finale-next", { style: "primary" });
-  } else if (step === 1) {
-    const cases = dossier.map((entry) => node("li", null,
-      node("div", { class: "split dossier-head" },
-        caption(`CASE ${number(entry.mission)} · ${entry.name}`),
-        caption(entry.objective)),
-      node("p", { class: "dossier-briefing" }, entry.briefing),
-      entry.rounds != null
-        ? node("p", { class: "caption dossier-meta" },
-          `${entry.rounds} ${entry.rounds === 1 ? "round" : "rounds"} · ${entry.signal}% signal · peak susp. ${entry.peak_suspicion}`)
-        : null));
+    controls = button(nextLabel, "finale-next", { style: "primary" });
+  } else if (step <= dossier.length) {
+    const entry = dossier[step - 1];
+    const nextEntry = dossier[step];
+    const details = [metric("Objective", entry.objective)];
+    if (entry.rounds != null) {
+      details.push(
+        metric("Signal", `${entry.signal}%`),
+        metric("Rounds", entry.rounds),
+        metric("Peak susp.", entry.peak_suspicion),
+      );
+    }
     paper = node("section", { class: "paper case-file finale" },
       stamp("DECLASSIFIED", true),
-      caption(`FULL OPERATION LOG · PAGE 2 / ${FINALE_STEPS}`),
-      node("h1", null, "The Kessel File"),
-      node("section", { class: "dossier" },
-        node("ol", null, ...cases)));
+      caption(`CASE FILE ${number(entry.mission)} OF ${number(dossier.length)} · PAGE ${step + 1} / ${totalSteps}`),
+      node("h1", null, entry.name),
+      node("blockquote", null, `“${entry.briefing}”`),
+      node("dl", { class: "briefing-details" }, ...details));
     controls = node("div", { class: "finale-nav" },
       button("Back", "finale-back"),
-      button("Next · Addendum", "finale-next", { style: "primary" }));
+      button(nextEntry ? `Next · Case ${number(nextEntry.mission)}` : "Next · Addendum", "finale-next", { style: "primary" }));
   } else {
     paper = node("section", { class: "paper case-file finale" },
       stamp("STATION PO1"),
-      caption(`POSTSCRIPT · PAGE 3 / ${FINALE_STEPS}`),
+      caption(`POSTSCRIPT · PAGE ${totalSteps} / ${totalSteps}`),
       node("h1", null, "Next Directive"),
       node("aside", { class: "finale-addendum" },
         caption("ADDENDUM · STATION PO1"),

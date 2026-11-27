@@ -1,7 +1,7 @@
 // Browser client: talks to the server over /ws, handles input, and redraws on every change.
 import { MESSAGE_LIMIT, REDACTED } from "./radio.js";
 import { interferenceIntensity, StaticNoise } from "./interference.js";
-import { FINALE_STEPS, renderBriefingModal, renderScreen } from "./screens.js";
+import { finaleStepCount, renderBriefingModal, renderScreen } from "./screens.js";
 
 const SESSION_KEY = "lost-in-transmission";
 const TUTORIAL_KEY = "lost-in-transmission-tutorial";
@@ -279,7 +279,7 @@ class Game {
       return;
     }
     if (action === "finale-next" && this.state?.phase === "finale") {
-      if (this.finaleStep < FINALE_STEPS - 1) {
+      if (this.finaleStep < finaleStepCount(this.state) - 1) {
         this.finaleStep += 1;
         this.render();
         window.scrollTo(0, 0);
@@ -336,13 +336,18 @@ class Game {
       this.command("confirm-leave");
       return;
     }
+    if (this.state?.phase === "finale" && (event.key === "ArrowRight" || event.key === "ArrowLeft")) {
+      event.preventDefault();
+      this.command(event.key === "ArrowRight" ? "finale-next" : "finale-back");
+      return;
+    }
     if (key === "enter") {
       if (event.target.matches?.("button:focus-visible")) return;
       event.preventDefault();
       if (!this.state) document.getElementById("room-code")?.focus();
       else if (this.composing) this.command("transmit");
       else if (this.moving) this.command("end_moves");
-      else if (this.state.phase === "finale" && this.finaleStep < FINALE_STEPS - 1) {
+      else if (this.state.phase === "finale" && this.finaleStep < finaleStepCount(this.state) - 1) {
         this.command("finale-next");
       } else if (this.available && this.state.phase !== "active" && !this.state.ready.includes(this.state.role)) {
         this.command("ready");

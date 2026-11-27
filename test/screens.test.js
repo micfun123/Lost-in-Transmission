@@ -140,15 +140,14 @@ test("debrief silences ECHO on Case 08 completion and offers to declassify the d
   assert.ok(completeText.includes("Declassify dossier"));
 });
 
-test("finale screen steps through totals, full operation log, and Station PO1 addendum for both roles", async (t) => {
+test("finale screen steps through totals, each case one by one, and Station PO1 addendum for both roles", async (t) => {
   const previousDocument = globalThis.document;
   globalThis.document = { createElement };
   t.after(() => {
     globalThis.document = previousDocument;
   });
 
-  const { FINALE_STEPS, renderScreen } = await import("../web/screens.js");
-  assert.equal(FINALE_STEPS, 3);
+  const { finaleStepCount, renderScreen } = await import("../web/screens.js");
   const room = new Room("ROOM1", () => 0, () => 0);
   room.connect("handler", {});
   room.connect("agent", {});
@@ -160,47 +159,60 @@ test("finale screen steps through totals, full operation log, and Station PO1 ad
     room.command("agent", { type: "ready" });
   }
 
+  const totalSteps = MISSIONS.length + 2;
   for (const role of ["handler", "agent"]) {
     const state = room.snapshot(role);
     assert.equal(state.phase, "finale");
+    assert.equal(finaleStepCount(state), totalSteps);
 
-    // Stage 1: Case Closed + campaign totals.
-    const stage1 = renderScreen(gameView(state, { finaleStep: 0 }));
-    const stage1Text = textContent(stage1);
-    assert.ok(stage1Text.includes("DECLASSIFIED"));
-    assert.ok(stage1Text.includes("PAGE 1 / 3"));
-    assert.ok(stage1Text.includes("Case Closed"));
-    assert.ok(stage1Text.includes("Campaign totals"));
-    assert.ok(stage1Text.includes(`${state.campaign.signal}%`));
-    assert.ok(stage1Text.includes(state.campaign.most_jammed.word));
-    assert.ok(stage1Text.includes("TRANSMISSION ENDED"));
-    assert.equal(stage1Text.includes("H E L L O"), false);
-    assert.equal(findAll(stage1, (node) => node.attrs?.["data-action"] === "finale-next").length, 1);
-    assert.equal(findAll(stage1, (node) => node.attrs?.["data-action"] === "ready").length, 0);
+    // Page 1: Case Closed + campaign totals.
+    const page1 = renderScreen(gameView(state, { finaleStep: 0 }));
+    const page1Text = textContent(page1);
+    assert.ok(page1Text.includes("DECLASSIFIED"));
+    assert.ok(page1Text.includes(`PAGE 1 / ${totalSteps}`));
+    assert.ok(page1Text.includes("Case Closed"));
+    assert.ok(page1Text.includes("Campaign totals"));
+    assert.ok(page1Text.includes(`${state.campaign.signal}%`));
+    assert.ok(page1Text.includes(state.campaign.most_jammed.word));
+    assert.ok(page1Text.includes("Next · Case 01"));
+    assert.ok(page1Text.includes("TRANSMISSION ENDED"));
+    assert.equal(page1Text.includes("H E L L O"), false);
+    assert.equal(findAll(page1, (node) => node.attrs?.["data-action"] === "finale-next").length, 1);
+    assert.equal(findAll(page1, (node) => node.attrs?.["data-action"] === "ready").length, 0);
 
-    // Stage 2: Full operation log with all briefings.
-    const stage2 = renderScreen(gameView(state, { finaleStep: 1 }));
-    const stage2Text = textContent(stage2);
-    assert.ok(stage2Text.includes("PAGE 2 / 3"));
-    assert.ok(stage2Text.includes("The Kessel File"));
-    for (const mission of MISSIONS) {
-      assert.ok(stage2Text.includes(mission.name), `missing ${mission.name}`);
-      assert.ok(stage2Text.includes(mission.briefing), `missing briefing for ${mission.name}`);
-    }
-    assert.equal(findAll(stage2, (node) => node.attrs?.["data-action"] === "finale-back").length, 1);
-    assert.equal(findAll(stage2, (node) => node.attrs?.["data-action"] === "finale-next").length, 1);
+    // Pages 2..9: Each case revealed one by one.
+    MISSIONS.forEach((mission, index) => {
+      const step = index + 1;
+      const caseScreen = renderScreen(gameView(state, { finaleStep: step }));
+      const caseText = textContent(caseScreen);
+      const caseNum = String(index + 1).padStart(2, "0");
+      assert.ok(caseText.includes(`CASE FILE ${caseNum} OF ${String(MISSIONS.length).padStart(2, "0")}`));
+      assert.ok(caseText.includes(`PAGE ${step + 1} / ${totalSteps}`));
+      assert.ok(caseText.includes(mission.name));
+      assert.ok(caseText.includes(mission.briefing));
+      const nextMission = MISSIONS[index + 1];
+      if (nextMission) {
+        assert.equal(caseText.includes(nextMission.briefing), false);
+        assert.ok(caseText.includes(`Next · Case ${String(index + 2).padStart(2, "0")}`));
+      } else {
+        assert.ok(caseText.includes("Next · Addendum"));
+      }
+      assert.equal(findAll(caseScreen, (node) => node.attrs?.["data-action"] === "finale-back").length, 1);
+      assert.equal(findAll(caseScreen, (node) => node.attrs?.["data-action"] === "finale-next").length, 1);
+      assert.equal(findAll(caseScreen, (node) => node.attrs?.["data-action"] === "ready").length, 0);
+    });
 
-    // Stage 3: Station PO1 addendum + Replay campaign.
-    const stage3 = renderScreen(gameView(state, { finaleStep: 2 }));
-    const stage3Text = textContent(stage3);
-    assert.ok(stage3Text.includes("PAGE 3 / 3"));
-    assert.ok(stage3Text.includes("STATION PO1"));
-    assert.ok(stage3Text.includes("Next Directive"));
-    assert.ok(stage3Text.includes("ADDENDUM · STATION PO1"));
-    assert.ok(stage3Text.includes("blowing up Southampton"));
-    assert.ok(stage3Text.includes("Replay campaign"));
-    assert.equal(findAll(stage3, (node) => node.attrs?.["data-action"] === "finale-back").length, 1);
-    assert.equal(findAll(stage3, (node) => node.attrs?.["data-action"] === "ready").length, 1);
+    // Final page: Station PO1 addendum + Replay campaign.
+    const lastPage = renderScreen(gameView(state, { finaleStep: totalSteps - 1 }));
+    const lastText = textContent(lastPage);
+    assert.ok(lastText.includes(`PAGE ${totalSteps} / ${totalSteps}`));
+    assert.ok(lastText.includes("STATION PO1"));
+    assert.ok(lastText.includes("Next Directive"));
+    assert.ok(lastText.includes("ADDENDUM · STATION PO1"));
+    assert.ok(lastText.includes("blowing up Southampton"));
+    assert.ok(lastText.includes("Replay campaign"));
+    assert.equal(findAll(lastPage, (node) => node.attrs?.["data-action"] === "finale-back").length, 1);
+    assert.equal(findAll(lastPage, (node) => node.attrs?.["data-action"] === "ready").length, 1);
   }
 
   const cleanState = {

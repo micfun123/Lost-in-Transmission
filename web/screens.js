@@ -1,5 +1,6 @@
 // Builds each screen from the latest server snapshot. No game state lives here.
 import { CALLSIGNS, MESSAGE_LIMIT, REDACTED, WORD_GROUPS } from "./radio.js";
+import { interferenceIntensity } from "./interference.js";
 
 const MAP_TILES = {
   "?": ["unknown", ""],
@@ -22,11 +23,12 @@ function node(tag, attributes, ...children) {
   return element;
 }
 
-function button(text, action, { disabled = false, style = "", value = "", label } = {}) {
+function button(text, action, { disabled = false, style = "", value = "", label, pressed } = {}) {
   const element = node("button", { type: "button", class: style, "data-action": action },
     text);
   if (value !== "") element.dataset.value = value;
   if (label) element.setAttribute("aria-label", label);
+  if (pressed !== undefined) element.setAttribute("aria-pressed", String(pressed));
   element.disabled = disabled;
   return element;
 }
@@ -130,9 +132,15 @@ function readyButton(game, text) {
     { style: "primary", disabled: !game.available || ready });
 }
 
-function header(state) {
+function header(state, game) {
+  const staticEnabled = game.staticNoise?.enabled ?? false;
   return node("header", { class: "game-header" },
     node("div", { class: "header-row" }, caption(`${state.role.toUpperCase()} · CASE ${number(state.mission)}`),
+      button(staticEnabled ? "STATIC ON" : "STATIC OFF", "static", {
+        style: "static-toggle",
+        label: staticEnabled ? "Disable radio static" : "Enable radio static",
+        pressed: staticEnabled,
+      }),
       node("span", null, `ROUND ${state.round} / ${state.round_limit}`)),
     node("div", { class: "header-row" }, node("h1", null, CALLSIGNS[state.role]),
       node("span", { id: "timer", class: "caption", "aria-label": "Time remaining" }),
@@ -281,7 +289,10 @@ function active(game) {
   } else {
     body = [map(state), ...agentControls(game)];
   }
-  return node("div", { class: "screen active-screen" }, header(state), ...body);
+  return node("div", {
+    class: "screen active-screen",
+    style: `--interference: ${interferenceIntensity(state.interference)}`,
+  }, header(state, game), ...body);
 }
 
 function worstIntercept(entries) {

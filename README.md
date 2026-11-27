@@ -25,7 +25,7 @@ Run `npm test` to check the game rules and multiplayer connection.
 - **Magpie** sees the complete map, the patrol route, and Wren's last camera sighting. **Wren** sees only the nine tiles around their current position.
 - **Wren** has four action points per round. Move with **WASD**, the **arrow keys**, or the on-screen arrows. Use **Take** and **Drop** at the pickup and delivery points. A decoy adds suspicion when taken and can be used to blend in. The guard advances with each spent point.
 - Close the move phase and send a word-tile field report to advance the round. ECHO learns recurring words from both players and remembers them across cases. Each player has one key per case to reveal a redacted tile in their latest incoming message.
-- Deliver the package within eight rounds and ten minutes. The debrief shows the signal score, the worst intercept, and a transmission log. Both players confirm advances, retries, and campaign replay.
+- Deliver the package within eight rounds and fifteen minutes. The debrief shows the signal score, the worst intercept, and a transmission log. Both players confirm advances, retries, and campaign replay.
 - The clock pauses if either player disconnects. Reopen the connection in the same browser tab to resume the room. Either player can close the room from the game.
 
 ## Play from separate devices

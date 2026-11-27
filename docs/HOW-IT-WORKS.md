@@ -90,7 +90,7 @@ These are the defaults. Each level file can change them (see [Extending the game
 
 | Rule | Default | Set by |
 |---|---|---|
-| Time per case | 10 minutes | `minutes` in the level file |
+| Time per case | 15 minutes | `minutes` in the level file |
 | Rounds per case | 8 | `rounds` in the level file |
 | Wren's action points per round | 4 | `actionPoints` in the level file |
 | Tiles per message | 1 to 6 | `MESSAGE_LIMIT` in `web/radio.js` |

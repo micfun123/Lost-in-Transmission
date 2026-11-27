@@ -8,7 +8,7 @@
   "dropLabel": "BRDG",
   "echoChance": 0.35,
   "echoMaxStatic": 2,
-  "minutes": 9,
+  "minutes": 12,
   "actionPoints": 5,
   "grid": [
     "S.#....#.D",

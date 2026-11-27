@@ -171,6 +171,8 @@ test("finale screen reveals all briefings, campaign totals, and silenced ECHO to
     assert.ok(text.includes("TRANSMISSION ENDED"));
     assert.equal(text.includes("H E L L O"), false);
     assert.ok(text.includes("Replay campaign"));
+    assert.ok(text.includes("ADDENDUM · STATION PO1"));
+    assert.ok(text.includes("blowing up Southampton"));
     for (const mission of MISSIONS) {
       assert.ok(text.includes(mission.name), `missing ${mission.name}`);
       assert.ok(text.includes(mission.briefing), `missing briefing for ${mission.name}`);

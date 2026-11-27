@@ -577,6 +577,17 @@ button.key:not(:disabled) {
 .dossier-briefing { font: 1.05rem / 1.45 var(--title); }
 .dossier-meta { font-size: 0.78rem; }
 
+.finale-addendum {
+  display: grid;
+  gap: 5px;
+  padding: 10px;
+  border: 1px dashed var(--red);
+  border-radius: 4px;
+  background: #f7f0de;
+}
+
+.finale-addendum .caption { color: var(--red); }
+
 .active-screen {
   position: relative;
   isolation: isolate;

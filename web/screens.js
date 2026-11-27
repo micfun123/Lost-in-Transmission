@@ -414,7 +414,11 @@ function finale(game) {
       topWord),
     node("section", { class: "dossier" },
       node("h2", { class: "caption" }, "Full operation log"),
-      node("ol", null, ...cases)));
+      node("ol", null, ...cases)),
+    node("aside", { class: "finale-addendum" },
+      caption("ADDENDUM · STATION PO1"),
+      node("p", null,
+        "With ECHO silenced, Station PO1 has reassigned the bureau's spare demolition budget to blowing up Southampton. The field team left for SO14 at dawn and is currently stuck on the M27 near Junction 7.")));
   return node("div", { class: "screen" }, station(), paper,
     echoBanner(game, { label: "CH 7.215 MHz · ECHO SILENCED", message: "TRANSMISSION ENDED", silent: true }),
     game.status || partnerReady ? status(game.status || partnerReady) : null,

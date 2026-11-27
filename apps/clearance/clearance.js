@@ -340,6 +340,7 @@ export function createClearanceRouter(options = {}) {
     const entry = {
       id: challengeId,
       targetFrequency,
+      grid,
       validIds,
       attempts: 0,
       expiresAt: now() + CHALLENGE_TTL_MS,
@@ -445,15 +446,35 @@ export function createClearanceRouter(options = {}) {
       if (!exactMatch) {
         const stamp = REJECTION_STAMPS[entry.attempts % REJECTION_STAMPS.length];
         entry.attempts += 1;
-        const { grid, validIds } = dealCustomsGrid(pickInt);
-        entry.validIds = validIds;
+        const wrongIds = new Set(selected.filter((id) => !entry.validIds.has(id)));
+        const removedIds = [];
+        entry.grid = entry.grid.filter((card) => {
+          if (wrongIds.has(card.id)) {
+            removedIds.push(card.id);
+            return false;
+          }
+          return true;
+        });
         entry.expiresAt = now() + CHALLENGE_TTL_MS;
+
+        let reason;
+        if (removedIds.length === 0) {
+          reason = "Manifest incomplete. Stamp all 3 genuine Station PO1 items.";
+        } else if (entry.grid.length === entry.validIds.size) {
+          reason = "All contraband confiscated. Only the 3 genuine Station PO1 items remain — stamp them to clear customs.";
+        } else if (removedIds.length === 1) {
+          reason = "1 contraband item confiscated from your desk. Stamp the 3 genuine Station PO1 items.";
+        } else {
+          reason = `${removedIds.length} contraband items confiscated from your desk. Stamp the 3 genuine Station PO1 items.`;
+        }
+
         sendJson(response, 400, {
           ok: false,
           stage: "customs",
           stamp,
-          reason: "Contraband slipped past your desk. Fresh manifest dealt. Stamp only the 3 genuine Station PO1 items.",
-          grid,
+          reason,
+          grid: entry.grid,
+          removedIds,
         });
         return true;
       }

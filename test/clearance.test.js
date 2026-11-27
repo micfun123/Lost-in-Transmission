@@ -131,3 +131,64 @@ test("clearance cookies stay valid across server restarts when CLEARANCE_SECRET 
   assert.equal(routerSameSecret.hasValidClearance({ headers: { cookie: cookiePair } }), true);
   assert.equal(routerOtherSecret.hasValidClearance({ headers: { cookie: cookiePair } }), false);
 });
+
+test("Beat 3 removes only wrong picks on failure until only the 3 legitimate items remain", async (t) => {
+  const server = createGameServer({ clearance: { secret: "elimination-test-secret" } });
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  t.after(() => { server.close(); });
+  const base = `http://127.0.0.1:${server.address().port}`;
+
+  const legitIds = new Set(LEGIT_CARDS.map((card) => card.id));
+  const challenge = await (await fetch(`${base}/api/clearance/challenge`, { method: "POST" })).json();
+  const validCards = challenge.grid.filter((card) => legitIds.has(card.id)).map((card) => card.id);
+  const decoyCards = challenge.grid.filter((card) => !legitIds.has(card.id)).map((card) => card.id);
+  assert.equal(validCards.length, 3);
+  assert.equal(decoyCards.length, 6);
+
+  async function submit(selectedIds) {
+    const res = await fetch(`${base}/api/clearance/verify`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        challengeId: challenge.challengeId,
+        gullShooed: true,
+        tunedFrequency: challenge.targetFrequency,
+        holdMs: 1500,
+        selectedIds,
+      }),
+    });
+    return { status: res.status, body: await res.json() };
+  }
+
+  // Incomplete selection of valid cards removes nothing.
+  const incomplete = await submit(validCards.slice(0, 2));
+  assert.equal(incomplete.status, 400);
+  assert.deepEqual(incomplete.body.removedIds, []);
+  assert.equal(incomplete.body.grid.length, 9);
+
+  // 2 valid + 1 wrong removes only the 1 wrong card (9 -> 8).
+  const firstMiss = await submit([validCards[0], validCards[1], decoyCards[0]]);
+  assert.equal(firstMiss.status, 400);
+  assert.deepEqual(firstMiss.body.removedIds, [decoyCards[0]]);
+  assert.equal(firstMiss.body.grid.length, 8);
+  assert.ok(validCards.every((id) => firstMiss.body.grid.some((c) => c.id === id)));
+
+  // 1 valid + 2 wrong removes those 2 wrong cards (8 -> 6).
+  const secondMiss = await submit([validCards[0], decoyCards[1], decoyCards[2]]);
+  assert.equal(secondMiss.status, 400);
+  assert.deepEqual(secondMiss.body.removedIds, [decoyCards[1], decoyCards[2]]);
+  assert.equal(secondMiss.body.grid.length, 6);
+
+  // Remaining 3 wrong cards are removed, leaving only the 3 legitimate options (6 -> 3).
+  const thirdMiss = await submit(decoyCards.slice(3, 6));
+  assert.equal(thirdMiss.status, 400);
+  assert.deepEqual(thirdMiss.body.removedIds, decoyCards.slice(3, 6));
+  assert.deepEqual(thirdMiss.body.grid.map((card) => card.id), validCards);
+  assert.match(thirdMiss.body.reason, /Only the 3 genuine Station PO1 items remain/i);
+
+  // Submitting the 3 remaining cards grants clearance.
+  const pass = await submit(thirdMiss.body.grid.map((card) => card.id));
+  assert.equal(pass.status, 200);
+  assert.equal(pass.body.ok, true);
+});

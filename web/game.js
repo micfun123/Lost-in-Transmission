@@ -386,13 +386,92 @@ class Game {
   }
 }
 
-new Game(
-  document.getElementById("game"),
-  document.getElementById("leave-dialog"),
-  document.getElementById("briefing-dialog"),
-);
-try {
-  if (!localStorage.getItem(TUTORIAL_KEY)) openTutorial();
-} catch {
-  // Storage is blocked, so skip the first-visit tutorial; the lobby button still opens it.
+const LOCAL_ENDING_PREVIEW = {
+  cases: [
+    {
+      mission: 1, name: "Dead Drop", package: "briefcase", destination: "fountain",
+      briefing: "A briefcase is waiting under a table at the red café. Bring it to the fountain. Routine.",
+      rounds: 4, signal: 86, peak_suspicion: 0,
+    },
+    {
+      mission: 2, name: "The Courier", package: "envelope", destination: "station",
+      briefing: "The courier missed their connection. Collect the envelope at the red café and leave it at the station.",
+      rounds: 5, signal: 72, peak_suspicion: 25,
+    },
+    {
+      mission: 3, name: "Dead Air", package: "recording", destination: "park",
+      briefing: "A technician left a recording of ECHO at the red café. Take it to the park before the signal disappears.",
+      rounds: 6, signal: 68, peak_suspicion: 50,
+    },
+    {
+      mission: 4, name: "Safe Deposit", package: "key", destination: "bank",
+      briefing: "The Dead Air recording ends with a voice from our own corridor: ECHO has a friend inside the bureau. That friend keeps a key at the red café. Take it to the bank and open their box.",
+      rounds: 4, signal: 57, peak_suspicion: 0,
+    },
+    {
+      mission: 5, name: "Negatives", package: "film", destination: "tower",
+      briefing: "The box at the bank held a roll of film: photographs of our own codebooks. A friendly printer at the red café has developed it. Carry the film to the tower so the bureau can see who took them.",
+      rounds: 5, signal: 50, peak_suspicion: 0,
+    },
+    {
+      mission: 6, name: "Missed Connection", package: "passport", destination: "station",
+      briefing: "The prints show the mole's face. It is our courier, the one who missed their connection. Their escape passport is waiting at the red café. Get it to the station before they do.",
+      rounds: 6, signal: 59, peak_suspicion: 0,
+    },
+    {
+      mission: 7, name: "The Bridge", package: "cipher", destination: "bridge",
+      briefing: "With no passport, the courier is trapped in Kessel and wants a deal: ECHO's cipher for safe passage. They left it at the red café. Bring it to the bridge. Trust nobody on the way.",
+      rounds: 7, signal: 62, peak_suspicion: 0,
+    },
+    {
+      mission: 8, name: "Last Transmission", package: "recording", destination: "embassy",
+      briefing: "The cipher works both ways. Our technicians have pressed it onto a recording, one message ECHO cannot learn, and left it at the red café. ECHO broadcasts from the embassy roof. Play it there and end the transmission.",
+      rounds: 7, signal: 62, peak_suspicion: 0,
+    },
+  ],
+  totals: {
+    signal: 64,
+    rounds: 44,
+    retries: 0,
+    messages: 80,
+    intercepts: 58,
+    peak_suspicion: 50,
+    most_jammed_word: "GO",
+    most_jammed_count: 25,
+  },
+};
+
+function renderLocalEndingPreview() {
+  const hostname = location.hostname;
+  const requestedRole = new URLSearchParams(location.search).get("ending-preview");
+  if (!["localhost", "127.0.0.1", "::1", "[::1]"].includes(hostname) ||
+      !["magpie", "wren"].includes(requestedRole)) return false;
+
+  const game = {
+    state: {
+      phase: "complete",
+      role: requestedRole === "magpie" ? "handler" : "agent",
+      mission: 8,
+      ready: [],
+      campaign: LOCAL_ENDING_PREVIEW,
+    },
+    online: false,
+    available: false,
+    status: "LOCAL ENDING PREVIEW · no game or campaign state changed",
+  };
+  document.getElementById("game").replaceChildren(renderScreen(game));
+  return true;
+}
+
+if (!renderLocalEndingPreview()) {
+  new Game(
+    document.getElementById("game"),
+    document.getElementById("leave-dialog"),
+    document.getElementById("briefing-dialog"),
+  );
+  try {
+    if (!localStorage.getItem(TUTORIAL_KEY)) openTutorial();
+  } catch {
+    // Storage is blocked, so skip the first-visit tutorial; the lobby button still opens it.
+  }
 }

@@ -62,6 +62,7 @@ All the game rules. It doesn't touch the network: `server.js` passes each player
 | [`samePosition(a, b)`](../operation.js#L94) | `true` if two positions match. `b` may be `null` (an item that has been picked up), which returns `false`. |
 | [`redactionCount(tiles)`](../operation.js#L98) | Counts `[STATIC]` tiles in a message. |
 | [`signalScore(sent, blocked)`](../operation.js#L102) | The debrief signal %: `round(100 × (sent − blocked) / sent)`, or 100 if nothing was sent. |
+| [`campaignSummary(cases, retries)`](../operation.js#L106) | Aggregates completed-case rounds, messages, intercepts, peak suspicion, overall signal, retries and the most-jammed word for the closing dossier. |
 
 ### `class Room`
 
@@ -73,36 +74,38 @@ One `Room` is one game between two players. It holds everything about that game.
 - `peers` (role → the server's client object for that player)
 - `missionIndex` (0–2)
 - `words` (word → number of messages it has appeared in; this is ECHO's memory)
+- `campaignCases` (successful case reports kept for the closing dossier)
+- `campaignRetries` (failed attempts counted across the campaign)
 - `emptySince`
 
 Everything else is reset at the start of each case by `prepareCase()`.
 
 | Method | Does | Called by |
 |---|---|---|
-| [`constructor(code, now, random)`](../operation.js#L107) | Sets up an empty room on case 1, in the `lobby` phase. `random` is used for ECHO's rolls. | `Multiplayer.createRoom` |
-| [`get mission`](../operation.js#L120) | The current entry from `MISSIONS`. | Throughout |
-| [`get paired`](../operation.js#L124) | `true` when both players are connected. Most actions, and the mission clock, need this. | `command`, `expireMission`, `snapshot` |
-| [`get guard`](../operation.js#L128) | The guard's current square. Walks the patrol route forward then back ("ping-pong"), using `patrolStep`, which goes up by one for every point Wren spends. For a route of length *n*, it repeats every `2(n−1)` steps. | `spendPoint`, `snapshot` |
-| [`connect(role, peer)`](../operation.js#L135) | Adds a player. Creates their token the first time. Moves `lobby` → `briefing` once both are in. If the clock was paused, it pushes the deadline back by how long the pause lasted. Returns the token. | `Multiplayer.join` |
-| [`disconnect(role)`](../operation.js#L148) | Removes a player and clears their *ready*. If a case is running, it pauses the clock. If the room is now empty, it records when (for the 10-minute clean-up). | `Multiplayer.disconnect` |
-| [`prepareCase()`](../operation.js#L155) | Resets everything for a fresh attempt at `missionIndex`: stage, round, points, all positions, bag, guard, suspicion, keys, decoded tiles, transmissions, activity log, ready list, clock and result. **Leaves `words` alone**, which is why ECHO remembers words across cases and retries. | `constructor`, `confirm` |
-| [`confirm(role)`](../operation.js#L180) | Marks a player ready. Once both are ready: on the briefing it starts the case and the clock. After a case it goes to the next case (`cleared`, which also halves ECHO's memory), back to case 1 with ECHO's memory wiped (`complete`), or retries (`failed`), then calls `prepareCase()`. | `command` |
-| [`expireMission()`](../operation.js#L202) | If a case is running, both players are connected and time is up, it fails the case and returns `true`. It doesn't fire while paused, so a disconnect can't run out the clock. | `Multiplayer.receive`, `Multiplayer.maintainRooms` |
-| [`finish(phase, result)`](../operation.js#L208) | Ends the case with an outcome and a result sentence. Recording `finishedAt` freezes the timer that the snapshot reports. | `act`, `raiseSuspicion`, `transmit`, `expireMission` |
-| [`command(role, data)`](../operation.js#L214) | **The single entry point for player actions.** See [below](#how-command-decides). | `Multiplayer.receive` |
-| [`move(direction)`](../operation.js#L235) | Moves Wren one square if the direction is valid, on the map, and not a wall, then spends a point. | `command` |
-| [`act(action)`](../operation.js#L246) | `take`, `drop`, `use`, `wait`. Handles the bag, the decoy's suspicion changes and delivery. Delivery costs a point *without* calling `spendPoint()`, so the guard doesn't move and Wren can't be spotted on the winning action. Every other successful action ends with `spendPoint()`. | `command` |
-| [`record(text)`](../operation.js#L288) | Adds a line to `activity[round]`. The debrief's transmission log shows the last line of each round. | `act`, `spendPoint`, `decrypt` |
-| [`raiseSuspicion(amount)`](../operation.js#L292) | Adds suspicion (up to 100), tracks the peak, and fails the case at 100. | `act`, `spendPoint` |
-| [`spendPoint()`](../operation.js#L298) | Uses one action point and moves the guard one step. If the guard is then within one square of Wren (not counting diagonals), it updates `lastSeen` and, the first time this round, adds +25 suspicion. | `move`, `act` |
-| [`transmit(role, tiles)`](../operation.js#L311) | Sends a radio message. Checks it's this role's turn (`order` → handler, `report` → agent) and that the tiles are 1–6 allowed words. **Applies ECHO**: each word already in 2+ earlier messages is rolled with `random()` against `echoChance × (uses − 1)`, up to `JAM_CHANCE_LIMIT`. Then, left to right, tiles of jammed words become `[STATIC]` up to `echoMaxStatic`, and never more than half the message. Only *then* adds this message's words to ECHO's memory. Saves both `sent` and `heard`, then moves the stage on. A handler's order goes to `moves`. An agent's report starts the next round, or fails the case if it was the level's last round. | `command` |
-| [`decrypt(role)`](../operation.js#L341) | Uses the player's one key for this case. Records in `decoded` which tile of their latest incoming message to reveal (the first `[STATIC]` one). | `command` |
-| [`incoming(role)`](../operation.js#L351) | The latest message sent *by the other role*, as this role heard it, with any decrypted tile filled back in. Returns `{ number, round, sender, tiles }` or `null`. | `decrypt`, `snapshot` |
-| [`snapshot(role)`](../operation.js#L363) | Builds the `state` message for one role. Shared fields go to both. Then Magpie gets the full map, patrol and CCTV sighting, and Wren gets a fogged map (`?` outside 3×3), position, bag, points, and the guard only if nearby. After a case ends, both also get the debrief data. `seconds` is counted from `finishedAt`, else `pausedAt`, else now, so the clock looks frozen when the case is over or paused. | `Multiplayer.publish` |
+| [`constructor(code, now, random)`](../operation.js#L137) | Sets up an empty room on case 1, in the `lobby` phase, and initializes campaign history. `random` is used for ECHO's rolls. | `Multiplayer.createRoom` |
+| [`get mission`](../operation.js#L152) | The current entry from `MISSIONS`. | Throughout |
+| [`get paired`](../operation.js#L156) | `true` when both players are connected. Most actions, and the mission clock, need this. | `command`, `expireMission`, `snapshot` |
+| [`get guard`](../operation.js#L160) | The guard's current square. Walks the patrol route forward then back ("ping-pong"), using `patrolStep`, which goes up by one for every point Wren spends. For a route of length *n*, it repeats every `2(n−1)` steps. | `spendPoint`, `snapshot` |
+| [`connect(role, peer)`](../operation.js#L167) | Adds a player. Creates their token the first time. Moves `lobby` → `briefing` once both are in. If the clock was paused, it pushes the deadline back by how long the pause lasted. Returns the token. | `Multiplayer.join` |
+| [`disconnect(role)`](../operation.js#L180) | Removes a player and clears their *ready*. If a case is running, it pauses the clock. If the room is now empty, it records when (for the 10-minute clean-up). | `Multiplayer.disconnect` |
+| [`prepareCase()`](../operation.js#L187) | Resets active-case state for a fresh attempt. **Leaves `words` and campaign history alone**, so ECHO remembers words and the dossier survives retries and case changes. | `constructor`, `confirm` |
+| [`confirm(role)`](../operation.js#L212) | Marks a player ready. Once both are ready: on the briefing it starts the case and the clock. After a case it advances, retries, or replays; replaying after `complete` clears ECHO's memory and campaign history. | `command` |
+| [`expireMission()`](../operation.js#L236) | If a case is running, both players are connected and time is up, it fails the case and returns `true`. It doesn't fire while paused, so a disconnect can't run out the clock. | `Multiplayer.receive`, `Multiplayer.maintainRooms` |
+| [`finish(phase, result)`](../operation.js#L242) | Ends the case, counts failed attempts as retries, and archives successful case metrics for the final dossier. Recording `finishedAt` freezes the timer that the snapshot reports. | `act`, `raiseSuspicion`, `transmit`, `expireMission` |
+| [`command(role, data)`](../operation.js#L278) | **The single entry point for player actions.** See [below](#how-command-decides). | `Multiplayer.receive` |
+| [`move(direction)`](../operation.js#L299) | Moves Wren one square if the direction is valid, on the map, and not a wall, then spends a point. | `command` |
+| [`act(action)`](../operation.js#L310) | `take`, `drop`, `use`, `wait`. Handles the bag, the decoy's suspicion changes and delivery. Delivery costs a point *without* calling `spendPoint()`, so the guard doesn't move and Wren can't be spotted on the winning action. Every other successful action ends with `spendPoint()`. | `command` |
+| [`record(text)`](../operation.js#L352) | Adds a line to `activity[round]`. The debrief's transmission log shows the last line of each round. | `act`, `spendPoint`, `decrypt` |
+| [`raiseSuspicion(amount)`](../operation.js#L356) | Adds suspicion (up to 100), tracks the peak, and fails the case at 100. | `act`, `spendPoint` |
+| [`spendPoint()`](../operation.js#L362) | Uses one action point and moves the guard one step. If the guard is then within one square of Wren (not counting diagonals), it updates `lastSeen` and, the first time this round, adds +25 suspicion. | `move`, `act` |
+| [`transmit(role, tiles)`](../operation.js#L375) | Sends a radio message. Checks it's this role's turn (`order` → handler, `report` → agent) and that the tiles are 1–6 allowed words. **Applies ECHO**: each word already in 2+ earlier messages is rolled with `random()` against `echoChance × (uses − 1)`, up to `JAM_CHANCE_LIMIT`. Then, left to right, tiles of jammed words become `[STATIC]` up to `echoMaxStatic`, and never more than half the message. Only *then* adds this message's words to ECHO's memory. Saves both `sent` and `heard`, then moves the stage on. A handler's order goes to `moves`. An agent's report starts the next round, or fails the case if it was the level's last round. | `command` |
+| [`decrypt(role)`](../operation.js#L405) | Uses the player's one key for this case. Records in `decoded` which tile of their latest incoming message to reveal (the first `[STATIC]` one). | `command` |
+| [`incoming(role)`](../operation.js#L415) | The latest message sent *by the other role*, as this role heard it, with any decrypted tile filled back in. Returns `{ number, round, sender, tiles }` or `null`. | `decrypt`, `snapshot` |
+| [`snapshot(role)`](../operation.js#L427) | Builds the `state` message for one role. Shared fields go to both. Then Magpie gets the full map, patrol and CCTV sighting, and Wren gets a fogged map (`?` outside 3×3), position, bag, points, and the guard only if nearby. At campaign completion, both receive the shared dossier history and totals. `seconds` is counted from `finishedAt`, else `pausedAt`, else now, so the clock looks frozen when the case is over or paused. | `Multiplayer.publish` |
 
 #### How `command` decides
 
-[`command`](../operation.js#L214) runs these checks in order, and the first one that matches decides the result:
+[`command`](../operation.js#L278) runs these checks in order, and the first one that matches decides the result:
 
 1. Partner not connected → *"Waiting for your partner."*
 2. `ready` on the briefing or a debrief → `confirm`.
@@ -159,7 +162,7 @@ Keeps `rooms` (code → `Room`) and connects sockets to rooms. Each connection g
 
 ## `web/game.js`
 
-The browser side. It loads as a module, sets up the tutorial, and creates one `Game`.
+The browser side. It loads as a module, sets up the tutorial, and creates one `Game`, unless a local-only ending preview was requested.
 
 ### Module-level code
 
@@ -171,6 +174,9 @@ The browser side. It loads as a module, sets up the tutorial, and creates one `G
 | [`readSession()` / `saveSession(session)`](../web/game.js#L13) | Read and write the reconnect details. Storage errors (private mode, blocked storage) are ignored, and the tab keeps the session in memory instead. |
 | [`setupTutorial(dialog)`](../web/game.js#L31) | Fills in the tutorial's small maps from `data-map` (rows separated by spaces) and an optional `data-fog="x,y"` (hide everything outside the 3×3 around that square). Connects Back and Next, and turns Next into **Play** on the last step. Returns an `open()` function that resets to step 1, opens the dialog, and marks it as seen. |
 | `openTutorial` | That `open()` function. Called from the lobby's *How to play* button, and automatically at startup if `TUTORIAL_KEY` isn't set. |
+| [`renderLocalEndingPreview()`](../web/game.js#L444) | On loopback hosts only, `?ending-preview=magpie` or `?ending-preview=wren` renders the corresponding ending without creating a game or connecting to the server. |
+
+With the local server running, open `http://localhost:8000/?ending-preview=magpie` or `http://localhost:8000/?ending-preview=wren` (after clearing the local clearance gate) to preview each version.
 
 ### `class Game`
 
@@ -225,11 +231,14 @@ Turns the `Game` object into page elements. It only reads `game`; it never chang
 
 | Function | Screen |
 |---|---|
-| [`renderScreen(game)`](../web/screens.js#L343) | **The only export.** Picks a screen from `state.phase`: no state or `lobby` → `lobby`, `briefing`, `active`, otherwise `debrief`. |
+| [`renderScreen(game)`](../web/screens.js#L431) | **The only export.** Picks a screen from `state.phase`: no state or `lobby` → `lobby`, `briefing`, `active`, `complete` → `ending`, otherwise `debrief`. |
 | [`lobby(game)`](../web/screens.js#L68) | Before joining: create, room code field, join, and how to play. After creating a room: the code, QR code, Copy, waiting status, and Close room. |
 | [`briefing(game)`](../web/screens.js#L109) | The case file: name, briefing text, objective, rounds, guards, interference, your role, your partner's status, and Ready. |
 | [`active(game)`](../web/screens.js#L277) | A running case. Magpie, and Wren while writing a report, get the map, incoming message, ECHO line and message composer. Wren while moving gets the map and `agentControls`. The screen also shows interference grain and an opt-in static audio control. |
-| [`debrief(game)`](../web/screens.js#L324) | Outcome stamp, signal / rounds / peak suspicion, the result sentence, the worst intercept, the transmission log, and Ready labelled *Next case*, *Retry case* or *Replay campaign*. Also shows a "H E L L O" message from an unknown sender, as flavour. |
+| [`campaignSummary(totals)`](../web/screens.js#L350) | Renders campaign-wide totals and the most-jammed word. |
+| [`campaignLog(cases)`](../web/screens.js#L364) | Renders each completed case's briefing, objective, rounds, signal and peak suspicion. |
+| [`ending(game)`](../web/screens.js#L379) | A scrollable declassified campaign dossier, with totals, the full case log, Magpie's evidence reveal or Wren's explanation, and the Southampton addendum. |
+| [`debrief(game)`](../web/screens.js#L412) | Outcome stamp, signal / rounds / peak suspicion, the result sentence, the worst intercept, the transmission log, and Ready labelled *Next case* or *Retry case*. Also shows a "H E L L O" message from an unknown sender, as flavour. |
 
 ### Pieces of the play screens
 

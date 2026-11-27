@@ -103,6 +103,36 @@ function signalScore(sent, blocked) {
   return sent ? Math.round(100 * (sent - blocked) / sent) : 100;
 }
 
+function campaignSummary(cases, retries) {
+  const total = cases.reduce((summary, entry) => ({
+    sent: summary.sent + entry.sent_tiles,
+    rounds: summary.rounds + entry.rounds,
+    messages: summary.messages + entry.messages,
+    intercepts: summary.intercepts + entry.intercepts,
+    peakSuspicion: Math.max(summary.peakSuspicion, entry.peak_suspicion),
+  }), { sent: 0, rounds: 0, messages: 0, intercepts: 0, peakSuspicion: 0 });
+  const jammedWords = new Map();
+  for (const entry of cases) {
+    for (const [word, count] of entry.jammed_words) {
+      jammedWords.set(word, (jammedWords.get(word) ?? 0) + count);
+    }
+  }
+  let mostJammed = null;
+  for (const [word, count] of jammedWords) {
+    if (!mostJammed || count > mostJammed[1]) mostJammed = [word, count];
+  }
+  return {
+    signal: signalScore(total.sent, total.intercepts),
+    rounds: total.rounds,
+    retries,
+    messages: total.messages,
+    intercepts: total.intercepts,
+    peak_suspicion: total.peakSuspicion,
+    most_jammed_word: mostJammed?.[0] ?? null,
+    most_jammed_count: mostJammed?.[1] ?? 0,
+  };
+}
+
 export class Room {
   constructor(code, now = () => performance.now(), random = Math.random) {
     this.code = code;
@@ -112,6 +142,8 @@ export class Room {
     this.peers = new Map();
     this.missionIndex = 0;
     this.words = new Map();
+    this.campaignCases = [];
+    this.campaignRetries = 0;
     this.emptySince = null;
     this.prepareCase();
     this.phase = "lobby";
@@ -193,6 +225,8 @@ export class Room {
       if (this.phase === "complete") {
         this.missionIndex = 0;
         this.words.clear();
+        this.campaignCases = [];
+        this.campaignRetries = 0;
       }
       this.prepareCase();
     }
@@ -209,6 +243,36 @@ export class Room {
     this.phase = phase;
     this.result = result;
     this.finishedAt = this.now();
+    if (phase === "failed") {
+      this.campaignRetries += 1;
+    } else if (phase === "cleared" || phase === "complete") {
+      const mission = this.mission;
+      const sentTiles = this.transmissions.reduce((sum, entry) => sum + entry.sent.length, 0);
+      let intercepts = 0;
+      const jammedWords = new Map();
+      for (const entry of this.transmissions) {
+        entry.heard.forEach((heard, index) => {
+          if (heard !== REDACTED) return;
+          intercepts += 1;
+          const word = entry.sent[index];
+          jammedWords.set(word, (jammedWords.get(word) ?? 0) + 1);
+        });
+      }
+      this.campaignCases.push({
+        mission: this.missionIndex + 1,
+        name: mission.name,
+        briefing: mission.briefing,
+        package: mission.package,
+        destination: mission.destination,
+        rounds: this.round,
+        signal: signalScore(sentTiles, intercepts),
+        peak_suspicion: this.peakSuspicion,
+        messages: this.transmissions.length,
+        intercepts,
+        sent_tiles: sentTiles,
+        jammed_words: [...jammedWords],
+      });
+    }
   }
 
   command(role, data) {
@@ -399,6 +463,12 @@ export class Room {
         result: this.result, peak_suspicion: this.peakSuspicion, signal: signalScore(sent, blocked),
         transmissions: this.transmissions, activity: this.activity,
       });
+    }
+    if (this.phase === "complete") {
+      state.campaign = {
+        cases: this.campaignCases.map(({ sent_tiles, jammed_words, ...entry }) => entry),
+        totals: campaignSummary(this.campaignCases, this.campaignRetries),
+      };
     }
     return state;
   }

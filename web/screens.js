@@ -347,6 +347,68 @@ function transmissionLog(state) {
     entries.length > 0 ? node("ol", null, ...entries) : node("p", null, "No transmissions recorded."));
 }
 
+function campaignSummary(totals) {
+  const mostJammed = totals.most_jammed_word
+    ? `${totals.most_jammed_word} · ${totals.most_jammed_count} INTERCEPTS`
+    : "NONE · 0 INTERCEPTS";
+  return node("section", { class: "campaign-summary" },
+    node("h2", { class: "caption" }, "Campaign totals"),
+    node("dl", { class: "debrief-details campaign-totals" },
+      metric("Signal", `${totals.signal}%`), metric("Rounds", totals.rounds),
+      metric("Retries", totals.retries), metric("Messages", totals.messages),
+      metric("Intercepts", totals.intercepts), metric("Peak susp.", totals.peak_suspicion)),
+    node("div", { class: "campaign-most-jammed" },
+      caption("MOST JAMMED WORD"), node("strong", null, mostJammed)));
+}
+
+function campaignLog(cases) {
+  const entries = cases.map((entry) =>
+    node("article", { class: "campaign-case" },
+      node("div", { class: "split" },
+        caption(`CASE ${number(entry.mission)} · ${entry.name}`),
+        caption(`${entry.package.toUpperCase()} → ${entry.destination.toUpperCase()}`)),
+      node("p", null, entry.briefing),
+      node("p", { class: "caption" },
+        `${entry.rounds} ROUNDS · ${entry.signal}% SIGNAL · PEAK SUSP. ${entry.peak_suspicion}`)));
+  return node("section", { class: "campaign-log" },
+    node("h2", { class: "caption" }, "Full operation log"),
+    entries.length ? node("div", { class: "campaign-cases" }, ...entries)
+      : node("p", null, "No completed cases recorded."));
+}
+
+function ending(game) {
+  const { state } = game;
+  const handler = state.role === "handler";
+  const campaign = state.campaign ?? {};
+  const totals = campaign.totals ?? {
+    signal: 0, rounds: 0, retries: 0, messages: 0, intercepts: 0,
+    peak_suspicion: 0, most_jammed_word: null, most_jammed_count: 0,
+  };
+  const paper = node("section", { class: "paper case-file ending-paper" },
+    stamp("DECLASSIFIED", true),
+    caption("CAMPAIGN DOSSIER · KESSEL 1974"),
+    node("h1", null, "Case Closed"),
+    node("h2", null, handler ? "Magpie connects the evidence" : "Wren gets the full picture"),
+    node("p", { class: "ending-intro" },
+      "The counter-cipher recording ran once from the embassy roof and took ECHO off the air. The courier's file is closed; every case is now declassified for Magpie and Wren."),
+    node("p", null, handler
+      ? "The pieces fit: a stolen codebook, a courier looking for an exit, and a cipher offered to ECHO for safe passage."
+      : "You carried each piece without seeing the whole picture. This dossier shows who the courier worked for and why the cipher mattered."),
+    campaignSummary(totals),
+    campaignLog(campaign.cases ?? []),
+    node("aside", { class: "ending-addendum" },
+      caption("ADDENDUM · SOUTHAMPTON"),
+      node("p", null,
+        "The courier was the mole inside the Bureau. You exposed them and silenced ECHO, but the nuclear strike was already beyond recall. Southampton was hit before the team could save it.")));
+  return node("div", { class: "screen ending-screen" }, station(), paper,
+    node("div", { class: "ending-terminal" },
+      node("div", null, caption("CH 7.215 MHz · ECHO SILENCED"),
+        node("strong", null, "TRANSMISSION ENDED")),
+      closeButton(game)),
+    game.status ? status(game.status) : null,
+    readyButton(game, "Replay campaign"));
+}
+
 function debrief(game) {
   const { state } = game;
   const failed = state.phase === "failed";
@@ -371,5 +433,6 @@ export function renderScreen(game) {
   if (!phase || phase === "lobby") return lobby(game);
   if (phase === "briefing") return briefing(game);
   if (phase === "active") return active(game);
+  if (phase === "complete") return ending(game);
   return debrief(game);
 }

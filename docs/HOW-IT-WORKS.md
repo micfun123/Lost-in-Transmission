@@ -66,7 +66,7 @@ flowchart LR
 | 7 | The Bridge | cipher → bridge | paper | Severe (10×10, 5 points a round, 9 minutes) |
 | 8 | Last Transmission | recording → embassy | umbrella | Severe (9×9, up to 3 static tiles) |
 
-The briefings tell one story: the ECHO recording from Dead Air points to a mole inside the bureau, and each case follows that thread until ECHO is silenced at the embassy.
+The briefings tell one story: the ECHO recording from Dead Air points to a mole inside the bureau. The evidence identifies the courier, who traded ECHO's cipher for safe passage. The final recording silences ECHO at the embassy, but the nuclear strike on Southampton has already happened.
 
 Each case is one JSON file in `levels/`, played in filename order. Its street map is written as lines of text, one per row. The first three cases are 8×8, later ones range from 6×6 to 10×10, and a level can be anywhere from 5×5 to 12×12:
 
@@ -164,6 +164,8 @@ The debrief shows:
 - The peak suspicion.
 - The **worst intercept**: the message with the most static.
 - A full transmission log of what was sent and what was heard.
+
+After the final case, both players see a scrollable declassified campaign dossier. It includes every successful case's briefing and results, plus campaign-wide signal, rounds, retries, messages, intercepts, peak suspicion and most-jammed word. Failed attempts count as retries; only completed runs appear in the case log.
 
 ## ECHO and the radio
 
@@ -278,6 +280,8 @@ There's no framework and no build step. The browser loads `web/game.js` and the 
   - **Enter** sends a message, ends moves, or readies up, depending on the screen.
   - **Escape** asks to close the room.
   - Keys are ignored while typing in a text box or while a dialog is open.
+
+For a local-only preview of either dossier perspective, see the `ending-preview` instructions in the [code reference](CODE.md#webgamejs). The preview uses sample campaign data and is available only on loopback hosts.
 - **Copy room code:** uses the browser's clipboard. It shows "Copied" for 2 seconds, or a notice if copying isn't allowed.
 - **Tutorial:** the five-step how-to-play guide is written in `index.html` and animated with CSS. `setupTutorial()` in `game.js` draws its small maps and handles Back and Next.
   - It opens automatically on a player's first visit. `localStorage` remembers that it was seen.

@@ -43,9 +43,22 @@ test("plays every level from its solution, keeps ECHO's memory between cases, an
     assert.equal(result.peak_suspicion, MISSIONS[index].solution.peakSuspicion);
     assert.match(result.result, /reached the/);
     assert.ok(result.transmissions.length > 2);
+    if (result.phase === "complete") {
+      const { cases, totals } = result.campaign;
+      assert.deepEqual(cases.map((entry) => entry.name), MISSIONS.map((mission) => mission.name));
+      assert.equal(cases[0].briefing, MISSIONS[0].briefing);
+      assert.equal(totals.rounds, cases.reduce((sum, entry) => sum + entry.rounds, 0));
+      assert.equal(totals.messages, cases.reduce((sum, entry) => sum + entry.messages, 0));
+      assert.equal(totals.intercepts, cases.reduce((sum, entry) => sum + entry.intercepts, 0));
+      assert.equal(totals.retries, 0);
+      assert.ok(totals.most_jammed_word);
+      assert.ok(totals.most_jammed_count > 0);
+    }
     ready(room);
   }
   assert.equal(room.snapshot("agent").mission, 1);
+  assert.equal(room.campaignCases.length, 0);
+  assert.equal(room.campaignRetries, 0);
   ready(room);
   command(room, "handler", "radio", { tiles: ["GO"] });
   assert.deepEqual(room.incoming("agent").tiles, ["GO"]);
@@ -76,6 +89,7 @@ test("jams learned words up to the level's cap, allows one decrypt, and keeps me
   }
   const result = room.snapshot("handler");
   assert.equal(result.phase, "failed");
+  assert.equal(room.campaignRetries, 1);
   assert.match(result.result, /last round/);
   assert.deepEqual(result.transmissions[2].heard, [REDACTED, "GO", "GO"]);
 

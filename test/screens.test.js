@@ -90,3 +90,48 @@ test("agent does not see the handler mission strip during moves or report", asyn
   });
   assert.equal(findAll(reportScreen, (node) => node.attrs?.["data-action"] === "briefing").length, 0);
 });
+
+test("completed campaigns show the ending from both roles' perspectives", async (t) => {
+  const previousDocument = globalThis.document;
+  globalThis.document = { createElement };
+  t.after(() => {
+    globalThis.document = previousDocument;
+  });
+
+  const { renderScreen } = await import("../web/screens.js");
+  const campaign = {
+    cases: Array.from({ length: 8 }, (_, index) => ({
+      mission: index + 1,
+      name: `Case ${index + 1}`,
+      package: "recording",
+      destination: "embassy",
+      briefing: `Briefing for case ${index + 1}.`,
+      rounds: index + 1,
+      signal: 80,
+      peak_suspicion: 0,
+    })),
+    totals: {
+      signal: 80, rounds: 36, retries: 1, messages: 48, intercepts: 4,
+      peak_suspicion: 20, most_jammed_word: "GO", most_jammed_count: 3,
+    },
+  };
+  for (const [role, heading] of [
+    ["handler", "Magpie connects the evidence"],
+    ["agent", "Wren gets the full picture"],
+  ]) {
+    const screen = renderScreen({
+      state: { phase: "complete", role, mission: 8, ready: [], campaign },
+      online: false,
+      available: false,
+      status: "",
+    });
+    const content = textContent(screen);
+    assert.ok(content.includes(heading));
+    assert.ok(content.includes("mole inside the Bureau"));
+    assert.ok(content.includes("Southampton was hit"));
+    assert.ok(content.includes("MOST JAMMED WORD"));
+    assert.ok(content.includes("Briefing for case 8."));
+    assert.equal(findAll(screen, (node) => node.attrs?.class?.split(" ").includes("campaign-case")).length, 8);
+    assert.equal(findAll(screen, (node) => node.attrs?.class?.split(" ").includes("ending-paper")).length, 1);
+  }
+});
